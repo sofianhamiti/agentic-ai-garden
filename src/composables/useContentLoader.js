@@ -1,6 +1,8 @@
 import { ref, computed } from 'vue'
 import { createGlobalState, useStorage } from '@vueuse/core'
-import filterConfig from '../data/filter-config'
+import filterConfig from '../config/filters'
+import { CONTENT_CONFIG } from '../config/content'
+import { useGitHubContentLoader } from './useGitHubContentLoader'
 
 /**
  * Global filter state using VueUse createGlobalState
@@ -50,6 +52,9 @@ export function useContentLoader() {
   
   // Get the global filter state
   const { filters, clearAllFilters } = useFilterState()
+  
+  // Initialize GitHub content loader if needed
+  const githubLoader = CONTENT_CONFIG.source === 'github' ? useGitHubContentLoader() : null
 
   /**
    * Count resources in a specific section without loading full content
@@ -84,100 +89,26 @@ export function useContentLoader() {
   }
 
   /**
-   * Load content from markdown files
+   * Load content from markdown files (local or GitHub)
    */
   const loadContent = async () => {
     isLoading.value = true
     error.value = null
     
     try {
-      console.log('[useContentLoader] Starting content load, current page:', filters.value.page, 'filter type:', filters.value.type);
+      console.log('[useContentLoader] Starting content load, current page:', filters.value.page, 'source:', CONTENT_CONFIG.source);
       
-      // Use Vite's import.meta.glob to get all markdown files based on the current page
-      let moduleObjects = {};
-
-      // Load content based on the current page
-      if (filters.value.page === 'build') {
-        // Load content for Build page
-        const patternModules = import.meta.glob('../data/content/build/patterns/*.md')
-        const blueprintModules = import.meta.glob('../data/content/build/blueprints/*.md')
-        const projectModules = import.meta.glob('../data/content/build/projects/*.md')
-        
-        moduleObjects = {
-          ...patternModules,
-          ...blueprintModules,
-          ...projectModules
+      if (CONTENT_CONFIG.source === 'github' && githubLoader) {
+        // Load from GitHub
+        await githubLoader.loadContentFromGitHub(filters.value.page)
+        content.value = githubLoader.content.value
+        if (githubLoader.error.value) {
+          error.value = githubLoader.error.value
         }
-      } else if (filters.value.page === 'learn') {
-        // Load content for Learn page
-        const blogModules = import.meta.glob('../data/content/learn/blogs/*.md')
-        const videoModules = import.meta.glob('../data/content/learn/videos/*.md')
-        const workshopModules = import.meta.glob('../data/content/learn/workshops/*.md')
-        
-        moduleObjects = {
-          ...blogModules,
-          ...videoModules,
-          ...workshopModules
-        }
+      } else {
+        // Load from local files (existing logic)
+        await loadLocalContent()
       }
-      
-      // Load all markdown files and extract their content
-      const contentItems = await Promise.all(
-        Object.entries(moduleObjects).map(async ([path, importModule]) => {
-          try {
-            // Import the module
-            const module = await importModule()
-            
-            // Extract frontmatter
-            const frontmatter = module.frontmatter || {}
-            
-            // Determine content type from path if not specified in frontmatter
-            const pathSegments = path.split('/')
-            const typeFromPath = pathSegments[pathSegments.length - 2] // Get parent directory name
-            const type = frontmatter.type || typeFromPath
-            
-            // Use filename as slug if not specified
-            const filename = pathSegments[pathSegments.length - 1]
-            const slug = frontmatter.slug || filename.replace('.md', '')
-            
-            // Extract description as excerpt if available
-            const excerpt = frontmatter.description || frontmatter.excerpt || ''
-            
-            // Extract image from frontmatter or use default based on type
-            const image = frontmatter.image || null
-            
-            return {
-              id: frontmatter.id || slug,
-              title: frontmatter.title || 'Untitled',
-              excerpt: excerpt,
-              url: frontmatter.url || '#',
-              image: image,
-              type,
-              date: frontmatter.date || new Date().toISOString().split('T')[0],
-              path,
-              // Extract filter properties
-              skillLevel: frontmatter.skillLevel || '',
-              frameworks: frontmatter.frameworks || [],
-              services: frontmatter.services || [],
-              components: frontmatter.components || [],
-              category: frontmatter.category || ''
-            }
-          } catch (err) {
-            console.error(`Error loading file ${path}:`, err)
-            return null
-          }
-        })
-      )
-      
-      // Filter out any null values from errors
-      content.value = contentItems
-        .filter(item => item !== null)
-        .sort((a, b) => {
-          // Sort by date, newest first
-          const dateA = new Date(a.date || 0)
-          const dateB = new Date(b.date || 0)
-          return dateB - dateA
-        })
       
       console.log(`[useContentLoader] Content loaded: ${content.value.length} items`);
       
@@ -201,6 +132,97 @@ export function useContentLoader() {
       isLoading.value = false;
       console.log(`[useContentLoader] Loading complete. Filtered content count: ${filteredContent.value.length}`);
     }
+  }
+
+  /**
+   * Load content from local markdown files (original implementation)
+   */
+  const loadLocalContent = async () => {
+    // Use Vite's import.meta.glob to get all markdown files based on the current page
+    let moduleObjects = {};
+
+    // Load content based on the current page
+    if (filters.value.page === 'build') {
+      // Load content for Build page
+      const patternModules = import.meta.glob('../data/content/build/patterns/*.md')
+      const blueprintModules = import.meta.glob('../data/content/build/blueprints/*.md')
+      const projectModules = import.meta.glob('../data/content/build/projects/*.md')
+      
+      moduleObjects = {
+        ...patternModules,
+        ...blueprintModules,
+        ...projectModules
+      }
+    } else if (filters.value.page === 'learn') {
+      // Load content for Learn page
+      const blogModules = import.meta.glob('../data/content/learn/blogs/*.md')
+      const videoModules = import.meta.glob('../data/content/learn/videos/*.md')
+      const workshopModules = import.meta.glob('../data/content/learn/workshops/*.md')
+      
+      moduleObjects = {
+        ...blogModules,
+        ...videoModules,
+        ...workshopModules
+      }
+    }
+    
+    // Load all markdown files and extract their content
+    const contentItems = await Promise.all(
+      Object.entries(moduleObjects).map(async ([path, importModule]) => {
+        try {
+          // Import the module
+          const module = await importModule()
+          
+          // Extract frontmatter
+          const frontmatter = module.frontmatter || {}
+          
+          // Determine content type from path if not specified in frontmatter
+          const pathSegments = path.split('/')
+          const typeFromPath = pathSegments[pathSegments.length - 2] // Get parent directory name
+          const type = frontmatter.type || typeFromPath
+          
+          // Use filename as slug if not specified
+          const filename = pathSegments[pathSegments.length - 1]
+          const slug = frontmatter.slug || filename.replace('.md', '')
+          
+          // Extract description as excerpt if available
+          const excerpt = frontmatter.description || frontmatter.excerpt || ''
+          
+          // Extract image from frontmatter or use default based on type
+          const image = frontmatter.image || null
+          
+          return {
+            id: frontmatter.id || slug,
+            title: frontmatter.title || 'Untitled',
+            excerpt: excerpt,
+            url: frontmatter.url || '#',
+            image: image,
+            type,
+            date: frontmatter.date || new Date().toISOString().split('T')[0],
+            path,
+            // Extract filter properties
+            skillLevel: frontmatter.skillLevel || '',
+            frameworks: frontmatter.frameworks || [],
+            services: frontmatter.services || [],
+            components: frontmatter.components || [],
+            category: frontmatter.category || ''
+          }
+        } catch (err) {
+          console.error(`Error loading file ${path}:`, err)
+          return null
+        }
+      })
+    )
+    
+    // Filter out any null values from errors
+    content.value = contentItems
+      .filter(item => item !== null)
+      .sort((a, b) => {
+        // Sort by date, newest first
+        const dateA = new Date(a.date || 0)
+        const dateB = new Date(b.date || 0)
+        return dateB - dateA
+      })
   }
 
   /**
