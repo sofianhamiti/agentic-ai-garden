@@ -7,7 +7,10 @@ on:
     branches: [ main ]
   # Allow manual trigger
   workflow_dispatch:
-  # Trigger when content repo changes (requires webhook setup)
+  # Run daily at 2 AM UTC to fetch latest content
+  schedule:
+    - cron: '0 2 * * *'
+  # Keep repository_dispatch for webhook compatibility (optional)
   repository_dispatch:
     types: [content-updated]
 
@@ -27,21 +30,56 @@ jobs:
         
     - name: Fetch content from external repository
       run: |
-        echo "Fetching content from external repository..."
-        # Clone the content repository
-        git clone https://github.com/sofianhamiti/agentic-ai-garden-content.git temp-content
+        echo "Fetching latest content from external repository..."
+        
+        # Remove existing content to ensure fresh fetch
+        rm -rf src/data/content
+        
+        # Clone the content repository with retry logic
+        for i in {1..3}; do
+          if git clone --depth 1 --branch main https://github.com/sofianhamiti/agentic-ai-garden-content.git temp-content; then
+            echo "✅ Content repository cloned successfully on attempt $i"
+            break
+          else
+            echo "❌ Clone attempt $i failed"
+            if [ $i -eq 3 ]; then
+              echo "::error::Failed to clone content repository after 3 attempts"
+              exit 1
+            fi
+            sleep 5
+          fi
+        done
+        
+        # Verify content was cloned
+        if [ ! -d "temp-content" ]; then
+          echo "::error::Content directory not found after cloning"
+          exit 1
+        fi
         
         # Create the data directory structure
         mkdir -p src/data/content
         
         # Copy content to the expected location
-        cp -r temp-content/* src/data/content/
+        if cp -r temp-content/* src/data/content/; then
+          echo "✅ Content copied successfully"
+        else
+          echo "::error::Failed to copy content"
+          exit 1
+        fi
         
         # Clean up
         rm -rf temp-content
         
-        echo "Content fetched successfully!"
-        ls -la src/data/content/
+        # Verify content structure
+        MARKDOWN_COUNT=$(find src/data/content -name "*.md" | wc -l)
+        if [ "$MARKDOWN_COUNT" -eq 0 ]; then
+          echo "::warning::No markdown files found in content"
+        else
+          echo "✅ Content fetched successfully!"
+          echo "📁 Content structure:"
+          find src/data/content -type d | head -5
+          echo "📄 Total markdown files: $MARKDOWN_COUNT"
+        fi
         
     - name: Install dependencies
       run: npm ci
@@ -50,8 +88,24 @@ jobs:
       run: npm run build
         
     - name: Deploy to GitHub Pages
-      if: github.ref == 'refs/heads/main'
+      if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
       uses: peaceiris/actions-gh-pages@v3
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./dist
+        
+    - name: Build Summary
+      if: always()
+      run: |
+        echo "## 🚀 Build Summary" >> $GITHUB_STEP_SUMMARY
+        echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        if [ -f "src/data/content" ]; then
+          CONTENT_COUNT=$(find src/data/content -name "*.md" | wc -l)
+          echo "- **Content Files**: $CONTENT_COUNT markdown files" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "- **Status**: ✅ Success" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "- **Status**: ❌ Failed" >> $GITHUB_STEP_SUMMARY
+        fi
