@@ -41,4 +41,5 @@ Thumbs.db
 .vite/
 
 # Claude
-.claude/
+.claude
+.claude/*
