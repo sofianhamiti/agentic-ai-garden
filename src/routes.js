@@ -29,7 +29,7 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory('/website/'),
   routes,
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {
