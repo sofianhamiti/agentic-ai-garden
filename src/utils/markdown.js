@@ -30,6 +30,12 @@ export function parseMarkdown(content) {
 export function renderMarkdown(markdown) {
   if (!markdown) return ''
   
+  // Ensure we have a string
+  if (typeof markdown !== 'string') {
+    console.error('renderMarkdown expects a string, got:', typeof markdown, markdown)
+    return `<p>Error: Content must be a string, received ${typeof markdown}</p>`
+  }
+  
   try {
     return md.render(markdown)
   } catch (error) {

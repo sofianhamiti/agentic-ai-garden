@@ -141,12 +141,16 @@ const loadUseCase = async () => {
   try {
     const { slug } = route.params
     
-    // Import the specific use case
-    const module = await import(`../data/content/build/use-cases/${slug}.md`)
+    // Import markdown as raw string for consistent processing
+    const rawModule = await import(`../data/content/build/use-cases/${slug}.md?raw`)
+    const rawMarkdown = rawModule.default
     
-    // Extract use case data
-    const frontmatter = module.frontmatter || {}
-    const content = module.default || ''
+    // Parse frontmatter and content using our utility
+    const { parseMarkdown } = await import('../utils/markdown')
+    const parsed = parseMarkdown(rawMarkdown)
+    
+    const frontmatter = parsed
+    const content = parsed.body
     
     useCase.value = {
       id: frontmatter.id || slug,
