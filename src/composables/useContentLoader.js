@@ -65,9 +65,8 @@ export function useContentLoader() {
       
       if (section === 'build') {
         modules = {
-          ...import.meta.glob('../data/content/build/patterns/*.md'),
-          ...import.meta.glob('../data/content/build/blueprints/*.md'),
-          ...import.meta.glob('../data/content/build/projects/*.md')
+          ...import.meta.glob('../data/content/build/templates/*.md'),
+          ...import.meta.glob('../data/content/build/use-cases/*.md')
         }
       } else if (section === 'learn') {
         modules = {
@@ -104,7 +103,7 @@ export function useContentLoader() {
       let validTypes = ['all'];
       
       if (filters.value.page === 'build') {
-        validTypes = ['all', 'patterns', 'blueprints', 'projects'];
+        validTypes = ['all', 'templates', 'use-cases'];
       } else if (filters.value.page === 'learn') {
         validTypes = ['all', 'blogs', 'videos', 'workshops'];
       }
@@ -132,14 +131,12 @@ export function useContentLoader() {
     // Load content based on the current page
     if (filters.value.page === 'build') {
       // Load content for Build page
-      const patternModules = import.meta.glob('../data/content/build/patterns/*.md')
-      const blueprintModules = import.meta.glob('../data/content/build/blueprints/*.md')
-      const projectModules = import.meta.glob('../data/content/build/projects/*.md')
+      const templateModules = import.meta.glob('../data/content/build/templates/*.md')
+      const useCaseModules = import.meta.glob('../data/content/build/use-cases/*.md')
       
       moduleObjects = {
-        ...patternModules,
-        ...blueprintModules,
-        ...projectModules
+        ...templateModules,
+        ...useCaseModules
       }
     } else if (filters.value.page === 'learn') {
       // Load content for Learn page

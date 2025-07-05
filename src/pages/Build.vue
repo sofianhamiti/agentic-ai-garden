@@ -4,7 +4,7 @@
       <div class="container">
         <h1 class="page-title">Build</h1>
         <p class="page-description">
-          Fast-track your development with patterns, blueprints, and example projects
+          Fast-track your development with templates and use cases
         </p>
       </div>
     </section>
@@ -124,9 +124,8 @@ const {
 // Tab options - customized for the Build page
 const tabs = [
   { label: 'All Resources', value: 'all' },
-  { label: 'Patterns', value: 'patterns' },
-  { label: 'Blueprints', value: 'blueprints' },
-  { label: 'Projects', value: 'projects' }
+  { label: 'Templates', value: 'templates' },
+  { label: 'Use Cases', value: 'use-cases' }
 ]
 
 // Log whenever the filteredContent changes (for debugging)
@@ -162,7 +161,7 @@ onBeforeMount(() => {
   console.log('[BUILD] Set page filter to:', filters.value.page);
   
   // Validate the filter type on mount
-  const validTypes = ['all', 'patterns', 'blueprints', 'projects'];
+  const validTypes = ['all', 'templates', 'use-cases'];
   if (!validTypes.includes(filters.value.type)) {
     console.log(`[BUILD] Resetting invalid initial filter type '${filters.value.type}' to 'all'`);
     filters.value.type = 'all';
@@ -206,7 +205,7 @@ onMounted(async () => {
   
   // Read type from URL query parameter if present
   const typeParam = route.query.type;
-  if (typeParam && ['all', 'patterns', 'blueprints', 'projects'].includes(typeParam)) {
+  if (typeParam && ['all', 'templates', 'use-cases'].includes(typeParam)) {
     console.log(`[BUILD] Setting type from URL parameter: ${typeParam}`);
     filters.value.type = typeParam;
   }
@@ -220,7 +219,7 @@ onMounted(async () => {
 
 // Watch for route query parameter changes to update tabs when navigating via header dropdown
 watch(() => route.query.type, (newType) => {
-  if (newType && ['all', 'patterns', 'blueprints', 'projects'].includes(newType)) {
+  if (newType && ['all', 'templates', 'use-cases'].includes(newType)) {
     console.log(`[BUILD] Route query type changed to: ${newType}`);
     filters.value.type = newType;
   }

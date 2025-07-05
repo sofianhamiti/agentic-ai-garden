@@ -90,7 +90,7 @@ const resourceCards = [
   },
   {
     title: 'Build',
-    description: 'Fast-track your development with patterns, blueprints, and example projects',
+    description: 'Fast-track your development with templates and use cases',
     count: buildCount, // Count build resources
     to: '/build', // Added placeholder link
     icon: CodeIcon
