@@ -4,7 +4,6 @@ import { fileURLToPath, URL } from 'node:url'
 import md from 'vite-plugin-md'
 
 export default defineConfig({
-  base: '/website/',
   plugins: [
     vue({
       include: [/\.vue$/, /\.md$/]
