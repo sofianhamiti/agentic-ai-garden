@@ -1,0 +1,30 @@
+{
+  "name": "agentic-ai-garden",
+  "version": "1.0.0",
+  "description": "A modern website for exploring Agentic AI on AWS",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@vueuse/core": "^10.11.1",
+    "gray-matter": "^4.0.3",
+    "markdown-it": "^14.1.0",
+    "reka-ui": "^2.3.0",
+    "vite-plugin-md": "^0.20.6",
+    "vue": "^3.3.11",
+    "vue-router": "^4.2.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.0",
+    "@vue/test-utils": "^2.4.4",
+    "jsdom": "^24.0.0",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.0"
+  },
+  "author": "",
+  "license": "MIT"
+}

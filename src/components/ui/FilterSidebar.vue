@@ -1,0 +1,689 @@
+<template>
+  <div class="filter-sidebar-wrapper">
+    <!-- Sidebar Container -->
+    <div class="filter-sidebar-container" :class="{ 'is-open': isOpen }">
+      <aside
+        id="filter-sidebar"
+        class="filter-sidebar"
+        ref="sidebar"
+      >
+        <div class="sidebar-header">
+          <div class="sidebar-header-left">
+            <button v-if="isMobile"
+              class="sidebar-close-button" 
+              @click="closeSidebar"
+              aria-label="Close filters"
+            >
+              <div class="close-button-icon">
+                <CloseIcon />
+              </div>
+              <span class="close-button-text">Close</span>
+            </button>
+            <h3 v-else class="sidebar-title">
+              Filters
+            </h3>
+          </div>
+          <div class="sidebar-header-right">
+            <button
+              class="clear-filters-small"
+              @click="clearFilters"
+              :disabled="!hasActiveFilters"
+              aria-label="Clear all filters"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+        
+        <div class="sidebar-content">
+          <!-- Time Period Filter Section -->
+          <FilterSection
+            v-if="showTimeFilter"
+            title="Time Period"
+            :icon="ClockIcon"
+            :is-mobile="isMobile"
+            :open="accordionState.time"
+            :toggle="() => toggleAccordion('time')"
+            :is-active="filters.time !== 'all'"
+          >
+            <FilterOptions
+              type="radio"
+              v-model="filters.time"
+              :options="filterOptions.timeFilters.values"
+              name="time"
+            />
+          </FilterSection>
+          
+          <!-- Skill Level Filter Section -->
+          <FilterSection
+            v-if="showSkillFilter"
+            title="Skill Level"
+            :icon="SkillIcon"
+            :is-mobile="isMobile"
+            :open="accordionState.skill"
+            :toggle="() => toggleAccordion('skill')"
+            :is-active="filters.skillLevel !== ''"
+          >
+            <FilterOptions
+              type="radio"
+              v-model="filters.skillLevel"
+              :options="[{ value: '', label: 'All Levels' }, ...filterOptions.skillLevels.values.map(skill => ({ value: skill, label: skill }))]"
+              name="skill"
+            />
+          </FilterSection>
+          
+          <!-- Frameworks Filter Section -->
+          <FilterSection
+            v-if="showFrameworksFilter && filterOptions.frameworks.values.length > 0"
+            title="Frameworks"
+            :icon="FrameworkIcon"
+            :is-mobile="isMobile"
+            :open="accordionState.frameworks"
+            :toggle="() => toggleAccordion('frameworks')"
+            :is-active="filters.frameworks.length > 0"
+          >
+            <FilterOptions
+              type="checkbox"
+              v-model="filters.frameworks"
+              :options="filterOptions.frameworks.values"
+            />
+          </FilterSection>
+          
+          <!-- AWS Services Filter Section -->
+          <FilterSection
+            v-if="showServicesFilter"
+            title="AWS Services"
+            :icon="ServiceIcon"
+            :is-mobile="isMobile"
+            :open="accordionState.services"
+            :toggle="() => toggleAccordion('services')"
+            :is-active="filters.services.length > 0"
+          >
+            <div>
+              <FilterOptions
+                type="checkbox"
+                v-model="filters.services"
+                :options="displayedServices"
+                scrollable
+              />
+              
+              <!-- Show more/less button -->
+              <button 
+                v-if="filteredServices.length > initialServicesCount" 
+                @click="toggleShowMoreServices" 
+                class="show-more"
+              >
+                <span v-if="!showAllServices">Show more ({{ filteredServices.length - initialServicesCount }} more)</span>
+                <span v-else>Show less</span>
+              </button>
+            </div>
+          </FilterSection>
+          
+        </div>
+      </aside>
+      
+      <!-- Backdrop overlay for mobile -->
+      <div 
+        v-if="isOpen" 
+        class="sidebar-backdrop"
+        @click="closeSidebar" 
+      ></div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import { useBreakpoints, useStorage, useScrollLock } from '@vueuse/core';
+import { useContentLoader, useFilterState } from '../../composables/useContentLoader';
+import '../../assets/styles/filter-components.css';
+
+// Props
+const props = defineProps({
+  resourceCount: {
+    type: Number,
+    default: 0
+  },
+  showTimeFilter: {
+    type: Boolean,
+    default: true
+  },
+  showSkillFilter: {
+    type: Boolean,
+    default: true
+  },
+  showFrameworksFilter: {
+    type: Boolean,
+    default: true
+  },
+  showServicesFilter: {
+    type: Boolean,
+    default: true
+  }
+});
+
+// Icon components
+import CloseIcon from './FilterSidebar/icons/CloseIcon.vue';
+import ClockIcon from './FilterSidebar/icons/ClockIcon.vue';
+import SkillIcon from './FilterSidebar/icons/SkillIcon.vue';
+import FrameworkIcon from './FilterSidebar/icons/FrameworkIcon.vue';
+import ServiceIcon from './FilterSidebar/icons/ServiceIcon.vue';
+
+// Filter components
+import FilterSection from './FilterSidebar/FilterSection.vue';
+import FilterOptions from './FilterSidebar/FilterOptions.vue';
+
+// Get the global filter state
+const { filters, clearAllFilters } = useFilterState();
+
+// Get available filters and filtered content from content loader
+const { getAvailableFilters, filteredContent, filters: contentFilters, content } = useContentLoader();
+const filterOptions = computed(() => getAvailableFilters.value);
+
+// Use either the prop value (if provided) or fallback to computed value for resources count
+const displayedResourceCount = computed(() => {
+  // If explicitly passed as prop, use that first
+  if (props.resourceCount > 0) {
+    return props.resourceCount;
+  }
+  // Otherwise fall back to computed count from filteredContent
+  return filteredContent.value?.length || 0;
+});
+
+// Watch for any changes in filters or content to ensure counter reactivity
+watch(
+  [() => filters.value, () => content, filteredContent],
+  () => {
+    // This watch will trigger recalculation of displayedResourceCount when filters change
+    console.log('[FilterSidebar] Filter or content changed, filtered resources count:', displayedResourceCount.value);
+  },
+  { deep: true }
+);
+
+// Sidebar state - using useStorage with a single object for better organization
+const sidebarState = useStorage('filter-sidebar-state', {
+  isOpen: false,
+  accordionState: {
+    time: true,
+    skill: true,
+    frameworks: true,
+    services: true
+  }
+});
+
+// Extract individual reactive values from sidebarState for easier use
+const isOpen = computed({
+  get: () => sidebarState.value.isOpen,
+  set: (value) => sidebarState.value.isOpen = value
+});
+
+const accordionState = computed({
+  get: () => sidebarState.value.accordionState,
+  set: (value) => sidebarState.value.accordionState = value
+});
+
+const sidebar = ref(null);
+
+// Setup responsive breakpoints using VueUse
+const breakpoints = useBreakpoints({
+  mobile: 640,
+  tablet: 768,
+  desktop: 1024,
+});
+
+const isMobile = computed(() => breakpoints.smallerOrEqual('tablet').value);
+const isDesktop = computed(() => breakpoints.greaterOrEqual('desktop').value);
+
+// Setup scroll lock for mobile
+const scrollLock = useScrollLock(document.body);
+const lock = () => { scrollLock.value = true; };
+const unlock = () => { scrollLock.value = false; };
+
+// Toggle accordion sections
+const toggleAccordion = (section) => {
+  accordionState.value[section] = !accordionState.value[section];
+};
+
+// Show/hide services functionality
+const initialServicesCount = 8; // Show first 8 services initially
+const showAllServices = ref(false);
+
+// All services without filtering
+const filteredServices = computed(() => {
+  return filterOptions.value?.services?.values || [];
+});
+
+// Displayed services based on show more/less state
+const displayedServices = computed(() => {
+  if (showAllServices.value || filteredServices.value.length <= initialServicesCount) {
+    return filteredServices.value;
+  }
+  return filteredServices.value.slice(0, initialServicesCount);
+});
+
+// Toggle show more/less services
+function toggleShowMoreServices() {
+  showAllServices.value = !showAllServices.value;
+}
+
+// Check if there are any active filters
+const hasActiveFilters = computed(() => {
+  return filters.value.time !== 'all' || 
+         filters.value.skillLevel !== '' || 
+         filters.value.frameworks.length > 0 || 
+         filters.value.services.length > 0;
+});
+
+// Simplified toggle function
+function toggleSidebar() {
+  isOpen.value = !isOpen.value;
+  
+  if (isMobile.value && isOpen.value) {
+    lock();
+  } else if (isMobile.value) {
+    unlock();
+  }
+}
+
+// Close sidebar
+function closeSidebar() {
+  isOpen.value = false;
+  unlock();
+}
+
+// Clear all filters
+function clearFilters() {
+  // Call the global filter reset function
+  clearAllFilters();
+  
+  // Close the sidebar on mobile
+  if (isMobile.value) {
+    closeSidebar();
+  }
+}
+
+// Handle window resize for responsive behavior
+let resizeTimeout;
+const handleResize = () => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    if (window.innerWidth >= 1024 && isOpen.value) {
+      document.body.style.overflow = '';
+    }
+  }, 100);
+};
+
+// Close sidebar on ESC key
+const handleEscKey = (e) => {
+  if (e.key === 'Escape' && isOpen.value) {
+    closeSidebar();
+  }
+};
+
+// Lifecycle hooks
+onMounted(() => {
+  document.addEventListener('keydown', handleEscKey);
+  window.addEventListener('resize', handleResize);
+  
+  // Restore scroll state when mounting component
+  if (isOpen.value && isMobile.value) {
+    lock();
+  }
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('keydown', handleEscKey);
+  window.removeEventListener('resize', handleResize);
+  unlock();
+});
+</script>
+
+<style>
+/* Filter Sidebar Wrapper */
+.filter-sidebar-wrapper {
+  position: relative;
+  width: 100%;
+  border: none;
+  border-radius: var(--radius-lg);
+  padding: var(--gr-space-md);
+  background: linear-gradient(
+    to bottom right,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0)
+  );
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04),
+              0 0 1px rgba(0, 0, 0, 0.1);
+  transition: none;
+  overflow: hidden; /* Ensure content doesn't spill out */
+}
+
+.dark .filter-sidebar-wrapper {
+  background: linear-gradient(
+    to bottom right,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0)
+  );
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15),
+              0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Filter Toggle Button */
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  height: 48px;
+  border-radius: 40px;
+  background: var(--aws-purple);
+  color: white;
+  border: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.2s ease;
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+}
+
+.filter-toggle:hover {
+  background: var(--aws-blue-dark);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.filter-toggle:active {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Filter Sidebar Container */
+.filter-sidebar-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Filter Sidebar Styles */
+.filter-sidebar {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  width: 300px !important;
+  max-width: 300px !important;
+  min-height: 250px;
+  margin: 0 auto;
+  background: transparent;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--aws-purple-rgb), 0.2) transparent;
+}
+
+/* Custom scrollbar for Webkit browsers */
+.filter-sidebar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.filter-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.filter-sidebar::-webkit-scrollbar-thumb {
+  background-color: rgba(var(--aws-purple-rgb), 0.15);
+  border-radius: var(--gr-space-xs);
+  transition: none;
+}
+
+.filter-sidebar::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(var(--aws-purple-rgb), 0.35);
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--gr-space-sm) var(--gr-space-md);
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  position: relative;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  margin-bottom: var(--gr-space-xs);
+}
+
+.sidebar-header-left,
+.sidebar-header-right {
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--aws-blue-dark);
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.filter-resources-count {
+  font-size: 0.78rem;
+  font-weight: 450;
+  color: #777;
+  opacity: 0.8;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  position: relative;
+  top: 0.5px;
+  padding-bottom: 1px;
+}
+
+.dark .sidebar-title {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dark .filter-resources-count {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.sidebar-header::after {
+  display: none; /* Hide the bottom line */
+}
+
+.sidebar-close-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gr-space-xs);
+  background: transparent;
+  border: none;
+  padding: var(--gr-space-xs) var(--gr-space-sm);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--aws-blue-dark);
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.sidebar-close-button:hover {
+  color: var(--aws-purple);
+  background-color: rgba(var(--aws-purple-rgb), 0.05);
+}
+
+.close-button-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(var(--aws-purple-rgb), 0.05);
+  transition: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  z-index: 1;
+}
+
+.sidebar-close-button:hover .close-button-icon {
+  background: rgba(var(--aws-purple-rgb), 0.1);
+}
+
+.sidebar-content {
+  padding: var(--gr-space-md);
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--aws-purple-rgb), 0.15) transparent;
+}
+
+.sidebar-content::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+  background-color: rgba(var(--aws-blue-rgb), 0.15);
+  border-radius: 4px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(var(--aws-purple-rgb), 0.25);
+}
+
+/* Backdrop overlay for mobile */
+.sidebar-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s linear, visibility 0s linear 0.2s;
+}
+
+.filter-sidebar-container.is-open .sidebar-backdrop {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.2s linear, visibility 0s linear 0s;
+}
+
+/* Dark mode styles */
+.dark .filter-sidebar {
+  color: white;
+}
+
+.dark .sidebar-close-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive styles */
+@media (max-width: 1023.98px) {
+  /* Mobile styles - sidebar slides in from left */
+  .filter-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 320px;
+    max-width: 85vw;
+    height: 100vh;
+    z-index: 1001;
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+    background: white;
+    border: none;
+    box-shadow: 
+      0 4px 20px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(0, 0, 0, 0.05);
+    transform: translateX(-110%);
+    transition: 
+      transform 0.2s linear, 
+      visibility 0s linear 0.2s;
+    visibility: hidden; /* Hide when closed */
+  }
+  
+  .dark .filter-sidebar {
+    background-color: var(--aws-blue-dark);
+    border-color: var(--color-border-dark);
+    box-shadow: 
+      0 4px 20px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+  
+  .filter-sidebar-container.is-open .filter-sidebar {
+    transform: translateX(0);
+    visibility: visible; /* Show when open */
+    transition: 
+      transform 0.2s linear, 
+      visibility 0s linear 0s;
+    box-shadow: 
+      0 8px 30px rgba(0, 0, 0, 0.15),
+      0 0 0 1px rgba(0, 0, 0, 0.05);
+  }
+  
+  .sidebar-content {
+    padding: var(--gr-space-md);
+  }
+  
+  .sidebar-close-button {
+    position: relative;
+    padding: var(--gr-space-xs);
+    height: 44px; /* Mobile tap target size */
+    margin-right: var(--gr-space-xs);
+  }
+  
+  /* Show the text in mobile view to improve usability */
+  .close-button-text {
+    font-weight: 500;
+    font-size: 0.9rem;
+  }
+  
+  /* Mobile filter toggle */
+  .filter-toggle {
+    bottom: 16px;
+    right: 16px;
+    height: 40px;
+    min-width: 40px;
+  }
+}
+
+/* Desktop styles */
+@media (min-width: 1024px) {
+  .filter-sidebar-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    width: 300px;
+    max-width: 300px;
+    flex-shrink: 0;
+  }
+    
+  .filter-sidebar {
+    position: sticky;
+    /* Increased top value to prevent overlap with header */
+    top: 150px;
+    /* Adjusted max-height to account for increased top offset */
+    max-height: calc(100vh - 220px);
+    transform: none !important;
+    display: block;
+    opacity: 1;
+    visibility: visible;
+    /* Add z-index to ensure proper stacking order */
+    z-index: 1;
+  }
+  
+  /* Hide the close button on desktop */
+  .sidebar-close-button {
+    display: none;
+  }
+}
+</style>
