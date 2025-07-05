@@ -59,12 +59,10 @@
               
               <!-- Add key to force re-render when filters change -->
               <div v-if="content.length > 0 && filteredContent.length > 0" class="content-grid" :key="filterChangeKey">
-                <a
+                <RouterLink
                   v-for="item in filteredContent"
                   :key="item.id"
-                  :href="item.url"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  :to="getDetailPath(item)"
                   class="content-card"
                 >
                   <div class="card-image">
@@ -76,7 +74,7 @@
                   <div class="content-meta">
                     <span class="content-date">{{ formatDate(item.date) }}</span>
                   </div>
-                </a>
+                </RouterLink>
               </div>
               <div v-else class="empty-state">
                 <p v-if="isLoading">Loading resources...</p>
@@ -97,7 +95,7 @@ import { useContentLoader, useFilterState } from '../composables/useContentLoade
 import { formatDate } from '../utils/markdown'
 import { getContentImage } from '../utils/contentHelpers'
 import { useDebounce } from '@vueuse/core'
-import { useRoute } from 'vue-router'
+import { useRoute, RouterLink } from 'vue-router'
 import FilterSidebar from '../components/ui/FilterSidebar.vue'
 
 // Get route for accessing query parameters
@@ -224,6 +222,25 @@ watch(() => route.query.type, (newType) => {
     filters.value.type = newType;
   }
 })
+
+// Generate detail page path based on item type
+function getDetailPath(item) {
+  const slug = item.id || item.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
+  
+  if (item.type === 'templates') {
+    return `/build/templates/${slug}`
+  } else if (item.type === 'use-cases') {
+    return `/build/use-cases/${slug}`
+  }
+  
+  // Future: Add patterns support
+  // else if (item.type === 'patterns') {
+  //   return `/discover/patterns/${slug}`
+  // }
+  
+  // Fallback to external URL if type doesn't match
+  return item.url || '#'
+}
 </script>
 
 <style>
@@ -413,6 +430,8 @@ watch(() => route.query.type, (newType) => {
   display: flex;
   flex-direction: column;
   box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.05);
+  text-decoration: none;
+  color: inherit;
 }
 
 .dark .content-card {
