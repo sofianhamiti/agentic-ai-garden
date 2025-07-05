@@ -2,7 +2,6 @@ import { ref, computed } from 'vue'
 import { createGlobalState, useStorage } from '@vueuse/core'
 import filterConfig from '../config/filters'
 import { CONTENT_CONFIG } from '../config/content'
-import { useGitHubContentLoader } from './useGitHubContentLoader'
 
 /**
  * Global filter state using VueUse createGlobalState
@@ -53,8 +52,6 @@ export function useContentLoader() {
   // Get the global filter state
   const { filters, clearAllFilters } = useFilterState()
   
-  // Initialize GitHub content loader if needed
-  const githubLoader = CONTENT_CONFIG.source === 'github' ? useGitHubContentLoader() : null
 
   /**
    * Count resources in a specific section without loading full content
@@ -96,19 +93,10 @@ export function useContentLoader() {
     error.value = null
     
     try {
-      console.log('[useContentLoader] Starting content load, current page:', filters.value.page, 'source:', CONTENT_CONFIG.source);
+      console.log('[useContentLoader] Starting content load, current page:', filters.value.page);
       
-      if (CONTENT_CONFIG.source === 'github' && githubLoader) {
-        // Load from GitHub
-        await githubLoader.loadContentFromGitHub(filters.value.page)
-        content.value = githubLoader.content.value
-        if (githubLoader.error.value) {
-          error.value = githubLoader.error.value
-        }
-      } else {
-        // Load from local files (existing logic)
-        await loadLocalContent()
-      }
+      // Load from local files (content fetched at build-time)
+      await loadLocalContent()
       
       console.log(`[useContentLoader] Content loaded: ${content.value.length} items`);
       

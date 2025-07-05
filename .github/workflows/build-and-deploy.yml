@@ -1,0 +1,57 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  # Allow manual trigger
+  workflow_dispatch:
+  # Trigger when content repo changes (requires webhook setup)
+  repository_dispatch:
+    types: [content-updated]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout website repo
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Fetch content from external repository
+      run: |
+        echo "Fetching content from external repository..."
+        # Clone the content repository
+        git clone https://github.com/sofianhamiti/agentic-ai-garden-content.git temp-content
+        
+        # Create the data directory structure
+        mkdir -p src/data/content
+        
+        # Copy content to the expected location
+        cp -r temp-content/* src/data/content/
+        
+        # Clean up
+        rm -rf temp-content
+        
+        echo "Content fetched successfully!"
+        ls -la src/data/content/
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build
+      run: npm run build
+      
+    - name: Deploy to GitHub Pages
+      if: github.ref == 'refs/heads/main'
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./dist

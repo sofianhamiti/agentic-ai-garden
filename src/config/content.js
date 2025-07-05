@@ -1,18 +1,15 @@
 export const CONTENT_CONFIG = {
-  // Content source: 'local' or 'github'
-  source: 'github',
+  // Content source: 'local' (content fetched at build-time via GitHub Actions)
+  source: 'local',
   
-  // GitHub configuration (only used when source is 'github')
+  // GitHub configuration (used by GitHub Actions, not client-side)
   github: {
     owner: 'sofianhamiti',
     repo: 'agentic-ai-garden-content',
-    branch: 'main',
-    basePath: '', // Empty string for root-level folders
-    // Optional: GitHub token for higher rate limits (store in .env)
-    // token: import.meta.env.VITE_GITHUB_TOKEN
+    branch: 'main'
   },
   
-  // Local configuration (only used when source is 'local')
+  // Local configuration - content is fetched at build-time and available locally
   local: {
     basePath: '../data/content'
   }
