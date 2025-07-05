@@ -4,6 +4,7 @@ import { fileURLToPath, URL } from 'node:url'
 import md from 'vite-plugin-md'
 
 export default defineConfig({
+  base: '/agentic-ai-garden/',
   plugins: [
     vue({
       include: [/\.vue$/, /\.md$/]
