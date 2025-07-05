@@ -14,6 +14,11 @@ on:
   repository_dispatch:
     types: [content-updated]
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -87,12 +92,20 @@ jobs:
     - name: Build
       run: npm run build
         
+    - name: Setup Pages
+      if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+      uses: actions/configure-pages@v4
+      
+    - name: Upload artifact
+      if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: ./dist
+        
     - name: Deploy to GitHub Pages
       if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./dist
+      id: deployment
+      uses: actions/deploy-pages@v4
         
     - name: Build Summary
       if: always()
@@ -100,7 +113,7 @@ jobs:
         echo "## 🚀 Build Summary" >> $GITHUB_STEP_SUMMARY
         echo "- **Trigger**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-        if [ -f "src/data/content" ]; then
+        if [ -d "src/data/content" ]; then
           CONTENT_COUNT=$(find src/data/content -name "*.md" | wc -l)
           echo "- **Content Files**: $CONTENT_COUNT markdown files" >> $GITHUB_STEP_SUMMARY
         fi
