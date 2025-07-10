@@ -4,8 +4,13 @@
     <template #header>
       <section class="header-section">
         <div class="container">
-          <h1 class="page-title">{{ content?.title }}</h1>
-          <p class="page-description">{{ content?.excerpt }}</p>
+          <div class="header-content">
+            <div class="back-button-container">
+              <BackButton />
+            </div>
+            <h1 class="page-title">{{ content?.title }}</h1>
+            <p class="page-description">{{ content?.excerpt }}</p>
+          </div>
         </div>
       </section>
     </template>
@@ -110,6 +115,7 @@ import { useRoute } from 'vue-router'
 import { renderMarkdown } from '../../utils/markdown'
 import { formatDate } from '../../utils/dateHelpers'
 import DetailPageLayout from '../layout/DetailPageLayout.vue'
+import BackButton from '../ui/BackButton.vue'
 
 // Props to configure the component behavior
 const props = defineProps({
@@ -287,6 +293,14 @@ onMounted(() => {
   width: 100%;
   margin: 0 auto;
   padding: 0 var(--space-4);
+}
+
+.header-content {
+  position: relative;
+}
+
+.back-button-container {
+  margin-bottom: var(--space-4);
 }
 
 .page-title {
@@ -498,6 +512,10 @@ onMounted(() => {
 @media (max-width: 768px) {
   .page-title {
     font-size: 2rem;
+  }
+  
+  .back-button-container {
+    margin-bottom: var(--space-3);
   }
 }
 </style>
