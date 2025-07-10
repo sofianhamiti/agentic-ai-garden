@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
-import md from 'vite-plugin-md'
+import Markdown from 'unplugin-vue-markdown/vite'
 import { copyFileSync, mkdirSync, readdirSync, statSync, existsSync, createReadStream } from 'fs'
 import { join, dirname, extname } from 'path'
 
@@ -84,22 +84,15 @@ export default defineConfig({
     vue({
       include: [/\.vue$/, /\.md$/]
     }),
-    md({
+    Markdown({
       markdownItOptions: {
         html: true,
         linkify: true,
         typographer: true
       },
       wrapperClasses: 'markdown-body',
-      transforms: {
-        before: (code, path) => {
-          // Add frontmatter export
-          return code
-        },
-        after: (html, path) => {
-          return html
-        }
-      }
+      frontmatter: true,
+      exposeFrontmatter: false
     }),
     templateAssetsPlugin(),
   ],

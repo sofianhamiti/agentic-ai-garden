@@ -43,8 +43,9 @@ export function parseMarkdownFile(rawContent) {
   }
 
   try {
-    const fmRegex = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]*)$/
+    const fmRegex = /^---\s*\n([\s\S]*?)\n---\s*(?:\n([\s\S]*))?$/
     const match = rawContent.match(fmRegex)
+    
     
     let frontmatter = {}
     let content = ''
@@ -77,8 +78,8 @@ export function parseMarkdownFile(rawContent) {
         const colonIndex = line.indexOf(':')
         if (colonIndex > 0) {
           // Save previous array if we were building one
-          if (inArray && currentKey && currentArray.length > 0) {
-            frontmatter[currentKey] = currentArray
+          if (inArray && currentKey) {
+            frontmatter[currentKey] = currentArray.length > 0 ? currentArray : []
           }
           
           // Reset for new key
@@ -107,9 +108,9 @@ export function parseMarkdownFile(rawContent) {
         }
       })
       
-      // Handle final array if the YAML ends with an array
-      if (inArray && currentKey && currentArray.length > 0) {
-        frontmatter[currentKey] = currentArray
+      // Handle final array if the YAML ends with an array, or empty array if no items were found
+      if (inArray && currentKey) {
+        frontmatter[currentKey] = currentArray.length > 0 ? currentArray : []
       }
       
       content = markdownContent

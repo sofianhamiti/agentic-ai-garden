@@ -131,23 +131,34 @@ export function useContentLoader() {
 
     // Load content based on the current page
     if (filters.value.page === 'build') {
-      // Load content for Build page
-      // For blueprints, load template.md files as raw text to parse frontmatter manually
+      // Load content for Build page - use raw imports for consistent frontmatter parsing
       const blueprintModules = import.meta.glob('../data/content/build/blueprints/**/template.md', {
         query: '?raw',
         import: 'default'
       })
-      const repositoryModules = import.meta.glob('../data/content/build/repositories/*.md')
+      const repositoryModules = import.meta.glob('../data/content/build/repositories/*.md', {
+        query: '?raw',
+        import: 'default'
+      })
       
       moduleObjects = {
         ...blueprintModules,
         ...repositoryModules
       }
     } else if (filters.value.page === 'learn') {
-      // Load content for Learn page
-      const blogModules = import.meta.glob('../data/content/learn/blogs/*.md')
-      const videoModules = import.meta.glob('../data/content/learn/videos/*.md')
-      const workshopModules = import.meta.glob('../data/content/learn/workshops/*.md')
+      // Load content for Learn page - use raw imports for consistent frontmatter parsing
+      const blogModules = import.meta.glob('../data/content/learn/blogs/*.md', {
+        query: '?raw',
+        import: 'default'
+      })
+      const videoModules = import.meta.glob('../data/content/learn/videos/*.md', {
+        query: '?raw',
+        import: 'default'
+      })
+      const workshopModules = import.meta.glob('../data/content/learn/workshops/*.md', {
+        query: '?raw',
+        import: 'default'
+      })
       
       moduleObjects = {
         ...blogModules,
@@ -163,15 +174,18 @@ export function useContentLoader() {
           // Import the module
           const module = await importModule()
           
-          // Extract frontmatter - handle both raw markdown and processed modules
+          // Extract frontmatter - all imports are now raw strings
           let frontmatter = {}
           if (typeof module === 'string') {
             // Raw markdown import - parse frontmatter manually
             const parsed = parseMarkdownFile(module)
             frontmatter = parsed.frontmatter || {}
+            
+            if (Object.keys(frontmatter).length === 0) {
+              console.warn(`No frontmatter found in ${path}`)
+            }
           } else {
-            // Regular module import
-            frontmatter = module.frontmatter || {}
+            console.warn(`Expected string module for ${path}, got:`, typeof module)
           }
           
           // Determine content type from path if not specified in frontmatter
