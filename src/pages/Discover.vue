@@ -1,5 +1,5 @@
 <template>
-  <ContentListingPage page-type="learn" />
+  <ContentListingPage page-type="discover" />
 </template>
 
 <script setup>

@@ -106,9 +106,16 @@ import { useScroll, useMediaQuery } from '@vueuse/core'
 // Navigation items
 const navItems = [
   { name: 'Home', path: '/' },
-  { name: 'Discover', path: '/discover' },
-  { 
-    name: 'Learn', 
+  {
+    name: 'Discover',
+    path: '/discover',
+    dropdown: [
+      { name: 'Services & Frameworks', path: '/discover?type=services-frameworks' },
+      { name: 'Patterns', path: '/discover?type=patterns' }
+    ]
+  },
+  {
+    name: 'Learn',
     path: '/learn',
     dropdown: [
       { name: 'Blogs', path: '/learn?type=blogs' },
@@ -116,7 +123,7 @@ const navItems = [
       { name: 'Workshops', path: '/learn?type=workshops' },
     ]
   },
-  { 
+  {
     name: 'Build',
     path: '/build',
     dropdown: [

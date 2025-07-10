@@ -71,31 +71,32 @@ const { filteredContent, loadContent, content, countResourcesBySection } = useCo
 // Reactive variables to hold the resource counts
 const learnCount = ref(0)
 const buildCount = ref(0)
+const discoverCount = ref(0)
 
-// Resource cards definition
-const resourceCards = [
+// Resource cards definition - make it reactive
+const resourceCards = computed(() => [
   {
     title: 'Discover',
     description: 'Begin your journey with Agentic AI concepts and AWS quickstarts',
-    count: 0, // Fixed count as number
-    to: '/discover', // Added placeholder link
+    count: discoverCount.value, // Count using total discover resources
+    to: '/discover',
     icon: LightningIcon
   },
   {
     title: 'Learn',
     description: 'Deepen your expertise with curated blogs, videos, and workshops',
-    count: learnCount, // Count using total learn resources
+    count: learnCount.value, // Count using total learn resources
     to: '/learn?type=all',
     icon: BookIcon
   },
   {
     title: 'Build',
     description: 'Fast-track your development with blueprints and repositories',
-    count: buildCount, // Count build resources
+    count: buildCount.value, // Count build resources
     to: '/build', // Added placeholder link
     icon: CodeIcon
   }
-]
+])
 
 // Scroll handling for animations
 const { y } = useScroll(window)
@@ -105,6 +106,7 @@ onMounted(async () => {
   // Use direct counting method to get section counts without loading all content
   buildCount.value = await countResourcesBySection('build')
   learnCount.value = await countResourcesBySection('learn')
+  discoverCount.value = await countResourcesBySection('discover')
   
   // Load content for the current page (for filtering/display purposes)
   await loadContent()

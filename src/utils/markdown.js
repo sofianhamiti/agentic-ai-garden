@@ -28,6 +28,75 @@ const md = new MarkdownIt({
 })
 
 /**
+ * Simple YAML frontmatter parser for browser compatibility
+ * @param {string} yamlString - YAML string to parse
+ * @returns {Object} - Parsed YAML object
+ */
+function parseYAML(yamlString) {
+  const result = {}
+  const lines = yamlString.trim().split('\n')
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim()
+    if (!line || line.startsWith('#')) continue
+    
+    // Handle simple key-value pairs
+    const colonIndex = line.indexOf(':')
+    if (colonIndex === -1) continue
+    
+    const key = line.substring(0, colonIndex).trim()
+    let value = line.substring(colonIndex + 1).trim()
+    
+    // Remove quotes if present
+    if ((value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1)
+    }
+    
+    // Handle arrays (simple format: "- item")
+    if (value === '' && i + 1 < lines.length) {
+      const arrayItems = []
+      let j = i + 1
+      
+      while (j < lines.length) {
+        const nextLine = lines[j].trim()
+        if (nextLine.startsWith('- ')) {
+          arrayItems.push(nextLine.substring(2).trim())
+          j++
+        } else if (nextLine === '' || nextLine.startsWith('#')) {
+          j++
+        } else {
+          break
+        }
+      }
+      
+      if (arrayItems.length > 0) {
+        result[key] = arrayItems
+        i = j - 1
+        continue
+      }
+    }
+    
+    // Handle boolean values
+    if (value === 'true') {
+      result[key] = true
+    } else if (value === 'false') {
+      result[key] = false
+    } else if (value === '[]') {
+      // Handle empty arrays
+      result[key] = []
+    } else if (!isNaN(value) && value !== '') {
+      // Handle numbers
+      result[key] = Number(value)
+    } else {
+      result[key] = value
+    }
+  }
+  
+  return result
+}
+
+/**
  * Parse markdown file with frontmatter
  * @param {string} rawContent - Raw markdown content with frontmatter
  * @returns {Object} - Parsed frontmatter and content
@@ -43,82 +112,39 @@ export function parseMarkdownFile(rawContent) {
   }
 
   try {
-    const fmRegex = /^---\s*\n([\s\S]*?)\n---\s*(?:\n([\s\S]*))?$/
-    const match = rawContent.match(fmRegex)
-    
-    
-    let frontmatter = {}
-    let content = ''
-    
-    if (match) {
-      const yamlContent = match[1]
-      const markdownContent = match[2]
-      
-      // Enhanced YAML parser - handles key-value pairs and both inline and multi-line arrays
-      const lines = yamlContent.split('\n')
-      let currentKey = null
-      let currentArray = []
-      let inArray = false
-      
-      lines.forEach(line => {
-        const trimmedLine = line.trim()
-        
-        // Handle array items (lines starting with -)
-        if (trimmedLine.startsWith('- ')) {
-          if (inArray && currentKey) {
-            let arrayValue = trimmedLine.substring(2).trim()
-            // Remove quotes
-            arrayValue = arrayValue.replace(/^["']|["']$/g, '')
-            currentArray.push(arrayValue)
-          }
-          return
-        }
-        
-        // Handle key-value pairs
-        const colonIndex = line.indexOf(':')
-        if (colonIndex > 0) {
-          // Save previous array if we were building one
-          if (inArray && currentKey) {
-            frontmatter[currentKey] = currentArray.length > 0 ? currentArray : []
-          }
-          
-          // Reset for new key
-          currentKey = line.substring(0, colonIndex).trim()
-          let value = line.substring(colonIndex + 1).trim()
-          inArray = false
-          currentArray = []
-          
-          // Remove quotes from value
-          value = value.replace(/^["']|["']$/g, '')
-          
-          if (value.startsWith('[') && value.endsWith(']')) {
-            // Handle inline arrays [item1, item2]
-            frontmatter[currentKey] = value.slice(1, -1)
-              .split(',')
-              .map(s => s.trim().replace(/^["']|["']$/g, ''))
-              .filter(s => s.length > 0)
-          } else if (value === '' || value === '[]') {
-            // Empty value or empty array - expect multi-line array to follow
-            inArray = true
-            currentArray = []
-          } else {
-            // Regular string value
-            frontmatter[currentKey] = value
-          }
-        }
-      })
-      
-      // Handle final array if the YAML ends with an array, or empty array if no items were found
-      if (inArray && currentKey) {
-        frontmatter[currentKey] = currentArray.length > 0 ? currentArray : []
+    // Check if content starts with frontmatter delimiter
+    if (!rawContent.startsWith('---')) {
+      console.warn('No frontmatter delimiter found')
+      return {
+        frontmatter: {},
+        content: rawContent,
+        error: 'No frontmatter found'
       }
-      
-      content = markdownContent
-    } else {
-      content = rawContent
     }
+
+    // Find the end of frontmatter
+    const frontmatterEnd = rawContent.indexOf('---', 3)
+    if (frontmatterEnd === -1) {
+      console.warn('No closing frontmatter delimiter found')
+      return {
+        frontmatter: {},
+        content: rawContent,
+        error: 'Invalid frontmatter format'
+      }
+    }
+
+    // Extract frontmatter and content
+    const frontmatterString = rawContent.substring(3, frontmatterEnd).trim()
+    const content = rawContent.substring(frontmatterEnd + 3).trim()
+
+    // Parse YAML frontmatter
+    const frontmatter = parseYAML(frontmatterString)
     
-    return { frontmatter, content, error: null }
+    return {
+      frontmatter,
+      content,
+      error: null
+    }
   } catch (error) {
     console.error('Error parsing markdown frontmatter:', error)
     return {
@@ -133,15 +159,23 @@ export function parseMarkdownFile(rawContent) {
  * Transform relative image paths in markdown to work with Vite's asset handling
  * @param {string} markdown - Markdown content
  * @param {string} templateSlug - Template slug for path resolution
+ * @param {string} contentType - Content type ('pattern' or 'blueprint')
  * @returns {string} - Markdown with transformed image paths
  */
-function transformImagePaths(markdown, templateSlug) {
+function transformImagePaths(markdown, templateSlug, contentType = 'blueprint') {
   if (!markdown || !templateSlug) return markdown
   
   // Transform relative image paths (./image.ext) to absolute paths
+  let basePath
+  if (contentType === 'pattern') {
+    basePath = `/agentic-ai-garden/src/data/content/discover/patterns/${templateSlug}`
+  } else {
+    basePath = `/agentic-ai-garden/src/data/content/build/templates/${templateSlug}`
+  }
+  
   return markdown.replace(
     /!\[([^\]]*)\]\(\.\/([^)]+\.(svg|png|jpg|jpeg|gif|webp|bmp|tiff|ico))\)/gi,
-    `![$1](/agentic-ai-garden/src/data/content/build/templates/${templateSlug}/$2)`
+    `![$1](${basePath}/$2)`
   )
 }
 
@@ -190,9 +224,10 @@ function processImageContent(html) {
  * Render markdown content to HTML
  * @param {string} markdown - Markdown content to render
  * @param {string} templateSlug - Optional template slug for image path resolution
+ * @param {string} contentType - Optional content type ('pattern' or 'blueprint')
  * @returns {string} - Rendered HTML
  */
-export function renderMarkdown(markdown, templateSlug = null) {
+export function renderMarkdown(markdown, templateSlug = null, contentType = 'blueprint') {
   if (!markdown) return ''
   
   if (typeof markdown !== 'string') {
@@ -202,7 +237,7 @@ export function renderMarkdown(markdown, templateSlug = null) {
   
   try {
     // Transform image paths if templateSlug is provided
-    const processedMarkdown = templateSlug ? transformImagePaths(markdown, templateSlug) : markdown
+    const processedMarkdown = templateSlug ? transformImagePaths(markdown, templateSlug, contentType) : markdown
     
     // Render markdown to HTML
     let html = md.render(processedMarkdown)

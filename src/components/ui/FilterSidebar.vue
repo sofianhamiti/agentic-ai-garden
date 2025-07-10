@@ -7,122 +7,36 @@
         class="filter-sidebar"
         ref="sidebar"
       >
-        <div class="sidebar-header">
-          <div class="sidebar-header-left">
-            <button v-if="isMobile"
-              class="sidebar-close-button" 
-              @click="closeSidebar"
-              aria-label="Close filters"
-            >
-              <div class="close-button-icon">
-                <CloseIcon />
-              </div>
-              <span class="close-button-text">Close</span>
-            </button>
-            <h3 v-else class="sidebar-title">
-              Filters
-            </h3>
-          </div>
-          <div class="sidebar-header-right">
-            <button
-              class="clear-filters-small"
-              @click="clearFilters"
-              :disabled="!hasActiveFilters"
-              aria-label="Clear all filters"
-            >
-              Clear
-            </button>
-          </div>
-        </div>
+        <!-- Filter Header Component -->
+        <FilterHeader
+          :is-mobile="isMobile"
+          :has-active-filters="hasActiveFilters"
+          @close="closeSidebar"
+          @clear-filters="clearFilters"
+        />
         
         <div class="sidebar-content">
-          <!-- Time Period Filter Section -->
-          <FilterSection
-            v-if="showTimeFilter"
-            title="Time Period"
+          <!-- Filter Category Sections Component -->
+          <FilterCategorySection
+            :filters="filters"
+            :filter-options="filterOptions"
+            :accordion-state="accordionState"
             :is-mobile="isMobile"
-            :open="accordionState.time"
-            :toggle="() => toggleAccordion('time')"
-            :is-active="filters.time !== 'all'"
-          >
-            <FilterOptions
-              type="radio"
-              v-model="filters.time"
-              :options="filterOptions.timeFilters.values"
-              name="time"
-            />
-          </FilterSection>
-          
-          <!-- Skill Level Filter Section -->
-          <FilterSection
-            v-if="showSkillFilter"
-            title="Skill Level"
-            :is-mobile="isMobile"
-            :open="accordionState.skill"
-            :toggle="() => toggleAccordion('skill')"
-            :is-active="filters.skillLevel !== ''"
-          >
-            <FilterOptions
-              type="radio"
-              v-model="filters.skillLevel"
-              :options="[{ value: '', label: 'All Levels' }, ...filterOptions.skillLevels.values.map(skill => ({ value: skill, label: skill }))]"
-              name="skill"
-            />
-          </FilterSection>
-          
-          <!-- Frameworks Filter Section -->
-          <FilterSection
-            v-if="showFrameworksFilter && filterOptions.frameworks.values.length > 0"
-            title="Frameworks"
-            :is-mobile="isMobile"
-            :open="accordionState.frameworks"
-            :toggle="() => toggleAccordion('frameworks')"
-            :is-active="filters.frameworks.length > 0"
-          >
-            <FilterOptions
-              type="checkbox"
-              v-model="filters.frameworks"
-              :options="filterOptions.frameworks.values"
-            />
-          </FilterSection>
-          
-          <!-- AWS Services Filter Section -->
-          <FilterSection
-            v-if="showServicesFilter"
-            title="AWS Services"
-            :is-mobile="isMobile"
-            :open="accordionState.services"
-            :toggle="() => toggleAccordion('services')"
-            :is-active="filters.services.length > 0"
-          >
-            <div>
-              <FilterOptions
-                type="checkbox"
-                v-model="filters.services"
-                :options="displayedServices"
-                scrollable
-              />
-              
-              <!-- Show more/less button -->
-              <button 
-                v-if="filteredServices.length > initialServicesCount" 
-                @click="toggleShowMoreServices" 
-                class="show-more"
-              >
-                <span v-if="!showAllServices">Show more ({{ filteredServices.length - initialServicesCount }} more)</span>
-                <span v-else>Show less</span>
-              </button>
-            </div>
-          </FilterSection>
-          
+            :show-time-filter="showTimeFilter"
+            :show-skill-filter="showSkillFilter"
+            :show-frameworks-filter="showFrameworksFilter"
+            :show-services-filter="showServicesFilter"
+            @toggle-accordion="toggleAccordion"
+            @filter-change="handleFilterChange"
+          />
         </div>
       </aside>
       
       <!-- Backdrop overlay for mobile -->
-      <div 
-        v-if="isOpen" 
+      <div
+        v-if="isOpen"
         class="sidebar-backdrop"
-        @click="closeSidebar" 
+        @click="closeSidebar"
       ></div>
     </div>
   </div>
@@ -158,12 +72,9 @@ const props = defineProps({
   }
 });
 
-// Icon components (only keeping CloseIcon for mobile sidebar)
-import CloseIcon from './FilterSidebar/icons/CloseIcon.vue';
-
-// Filter components
-import FilterSection from './FilterSidebar/FilterSection.vue';
-import FilterOptions from './FilterSidebar/FilterOptions.vue';
+// Decomposed filter components
+import FilterHeader from './FilterSidebar/FilterHeader.vue';
+import FilterCategorySection from './FilterSidebar/FilterCategorySection.vue';
 
 // Get the global filter state
 const { filters, clearAllFilters } = useFilterState();
@@ -236,27 +147,12 @@ const toggleAccordion = (section) => {
   accordionState.value[section] = !accordionState.value[section];
 };
 
-// Show/hide services functionality
-const initialServicesCount = 8; // Show first 8 services initially
-const showAllServices = ref(false);
-
-// All services without filtering
-const filteredServices = computed(() => {
-  return filterOptions.value?.services?.values || [];
-});
-
-// Displayed services based on show more/less state
-const displayedServices = computed(() => {
-  if (showAllServices.value || filteredServices.value.length <= initialServicesCount) {
-    return filteredServices.value;
-  }
-  return filteredServices.value.slice(0, initialServicesCount);
-});
-
-// Toggle show more/less services
-function toggleShowMoreServices() {
-  showAllServices.value = !showAllServices.value;
-}
+// Handle filter changes from child components
+const handleFilterChange = (filterType, value) => {
+  // The filters are already reactive through v-model in child components
+  // This handler can be used for additional logic if needed in the future
+  console.log(`[FilterSidebar] Filter changed: ${filterType} = ${value}`);
+};
 
 // Check if there are any active filters
 const hasActiveFilters = computed(() => {
@@ -441,99 +337,7 @@ onBeforeUnmount(() => {
   background-color: rgba(var(--aws-purple-rgb), 0.4);
 }
 
-.sidebar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--gr-space-sm) var(--gr-space-md);
-  border-bottom: 1px solid transparent;
-  background: transparent;
-  position: relative;
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
-  margin-bottom: var(--gr-space-xs);
-}
-
-.sidebar-header-left,
-.sidebar-header-right {
-  display: flex;
-  align-items: center;
-}
-
-.sidebar-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 0;
-  color: var(--aws-blue-dark);
-  letter-spacing: -0.01em;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.filter-resources-count {
-  font-size: 0.78rem;
-  font-weight: 450;
-  color: #777;
-  opacity: 0.8;
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-  position: relative;
-  top: 0.5px;
-  padding-bottom: 1px;
-}
-
-.dark .sidebar-title {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.dark .filter-resources-count {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.sidebar-header::after {
-  display: none; /* Hide the bottom line */
-}
-
-.sidebar-close-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--gr-space-xs);
-  background: transparent;
-  border: none;
-  padding: var(--gr-space-xs) var(--gr-space-sm);
-  font-size: 0.95rem;
-  font-weight: 500;
-  color: var(--aws-blue-dark);
-  cursor: pointer;
-  border-radius: var(--radius-md);
-  transition: none;
-  position: relative;
-  overflow: hidden;
-}
-
-.sidebar-close-button:hover {
-  color: var(--aws-purple);
-  background-color: rgba(var(--aws-purple-rgb), 0.05);
-}
-
-.close-button-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: rgba(var(--aws-purple-rgb), 0.05);
-  transition: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  z-index: 1;
-}
-
-.sidebar-close-button:hover .close-button-icon {
-  background: rgba(var(--aws-purple-rgb), 0.1);
-}
+/* Sidebar header styles are now in FilterHeader.vue */
 
 .sidebar-content {
   padding: var(--gr-space-md);
@@ -649,18 +453,7 @@ onBeforeUnmount(() => {
     padding: var(--gr-space-md);
   }
   
-  .sidebar-close-button {
-    position: relative;
-    padding: var(--gr-space-xs);
-    height: 44px; /* Mobile tap target size */
-    margin-right: var(--gr-space-xs);
-  }
-  
-  /* Show the text in mobile view to improve usability */
-  .close-button-text {
-    font-weight: 500;
-    font-size: 0.9rem;
-  }
+  /* Mobile close button styles are now in FilterHeader.vue */
   
   /* Mobile filter toggle */
   .filter-toggle {
@@ -694,9 +487,6 @@ onBeforeUnmount(() => {
     z-index: 1;
   }
   
-  /* Hide the close button on desktop */
-  .sidebar-close-button {
-    display: none;
-  }
+  /* Close button visibility is now handled in FilterHeader.vue */
 }
 </style>

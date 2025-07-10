@@ -8,6 +8,7 @@
   --aws-blue-dark: #232f3e;
   --aws-blue-medium: #1c2c41;
   --aws-blue-light: #0f2444;
+  --aws-blue-rgb: 35, 47, 62;
   --aws-purple: #4d27aa;
   --aws-purple-dark: #3d1f87;
   --aws-purple-rgb: 77, 39, 170;
@@ -39,29 +40,17 @@
   --font-heading: var(--font-sans);
   --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
 
-  /* Spacing - Golden Ratio Based */
-  --space-1: 0.25rem;
-  --space-2: 0.5rem;
-  --space-3: 0.75rem;
-  --space-4: 1rem; /* base unit */
-  --space-6: 1.5rem;
-  --space-8: 2rem;
-  --space-12: 3rem;
-  --space-16: 4rem;
-  --space-20: 5rem;
-  --space-24: 6rem;
-  
-  /* Golden Ratio Spacing System */
-  --phi: 1.618;
-  --phi-inverse: 0.618;
-  --phi-squared: 2.618;
-  --phi-cubed: 4.236;
-  
-  /* Phi-based spacing */
-  --space-phi-3: 0.618rem; /* φ⁻¹ */
-  --space-phi: 1.618rem; /* φ */
-  --space-phi-2: 2.618rem; /* φ² */
-  --space-phi-3: 4.236rem; /* φ³ */
+  /* Simplified 8-point grid spacing system */
+  --space-1: 0.25rem;   /* 4px */
+  --space-2: 0.5rem;    /* 8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px - base unit */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+  --space-24: 6rem;     /* 96px */
   
   /* Borders */
   --radius-sm: 0.125rem;

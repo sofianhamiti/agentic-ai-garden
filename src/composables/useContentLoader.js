@@ -75,6 +75,11 @@ export function useContentLoader() {
           ...import.meta.glob('../data/content/learn/videos/*.md'),
           ...import.meta.glob('../data/content/learn/workshops/*.md')
         }
+      } else if (section === 'discover') {
+        modules = {
+          ...import.meta.glob('../data/content/discover/services-frameworks/*.md'),
+          ...import.meta.glob('../data/content/discover/patterns/*/pattern.md')
+        }
       }
       
       // Simply count the number of modules
@@ -107,6 +112,8 @@ export function useContentLoader() {
         validTypes = ['all', 'blueprints', 'repositories'];
       } else if (filters.value.page === 'learn') {
         validTypes = ['all', 'blogs', 'videos', 'workshops'];
+      } else if (filters.value.page === 'discover') {
+        validTypes = ['all', 'services-frameworks', 'patterns'];
       }
       
       if (!validTypes.includes(filters.value.type)) {
@@ -165,6 +172,21 @@ export function useContentLoader() {
         ...videoModules,
         ...workshopModules
       }
+    } else if (filters.value.page === 'discover') {
+      // Load content for Discover page - use raw imports for consistent frontmatter parsing
+      const servicesFrameworksModules = import.meta.glob('../data/content/discover/services-frameworks/*.md', {
+        query: '?raw',
+        import: 'default'
+      })
+      const patternsModules = import.meta.glob('../data/content/discover/patterns/*/pattern.md', {
+        query: '?raw',
+        import: 'default'
+      })
+      
+      moduleObjects = {
+        ...servicesFrameworksModules,
+        ...patternsModules
+      }
     }
     
     // Load all markdown files and extract their content
@@ -206,12 +228,12 @@ export function useContentLoader() {
           
           const type = frontmatter.type || typeFromPath
           
-          // Use filename as slug if not specified, but for templates use the directory name
+          // Use filename as slug if not specified, but for templates and patterns use the directory name
           const filename = pathSegments[pathSegments.length - 1]
           let slug = frontmatter.slug || filename.replace('.md', '')
           
-          // For template.md files, use the parent directory name as the slug
-          if (filename === 'template.md') {
+          // For template.md and pattern.md files, use the parent directory name as the slug
+          if (filename === 'template.md' || filename === 'pattern.md') {
             const templateDirName = pathSegments[pathSegments.length - 2]
             slug = frontmatter.slug || templateDirName
           }
@@ -236,7 +258,11 @@ export function useContentLoader() {
             frameworks: frontmatter.frameworks || [],
             services: frontmatter.services || [],
             components: frontmatter.components || [],
-            category: frontmatter.category || ''
+            category: frontmatter.category || '',
+            // Discover-specific fields
+            industry: frontmatter.industry || '',
+            pricing: frontmatter.pricing || '',
+            company: frontmatter.company || ''
           }
         } catch (err) {
           console.error(`Error loading file ${path}:`, err)

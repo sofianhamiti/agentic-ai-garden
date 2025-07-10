@@ -44,6 +44,41 @@ function templateAssetsPlugin() {
         }
         next()
       })
+      
+      // Serve pattern assets during development
+      server.middlewares.use('/agentic-ai-garden/src/data/content/discover/patterns', (req, res, next) => {
+        try {
+          // Remove the base path and construct local file path
+          const filePath = req.url.replace('/agentic-ai-garden/src/data/content/discover/patterns', '')
+          const fullPath = join(process.cwd(), 'src/data/content/discover/patterns', filePath)
+          
+          // Check if file exists and is an image
+          if (existsSync(fullPath) && /\.(svg|png|jpg|jpeg|gif|webp|bmp|tiff|ico)$/i.test(fullPath)) {
+            const ext = extname(fullPath).toLowerCase()
+            const mimeTypes = {
+              '.svg': 'image/svg+xml',
+              '.png': 'image/png',
+              '.jpg': 'image/jpeg',
+              '.jpeg': 'image/jpeg',
+              '.gif': 'image/gif',
+              '.webp': 'image/webp',
+              '.bmp': 'image/bmp',
+              '.tiff': 'image/tiff',
+              '.ico': 'image/x-icon'
+            }
+            
+            res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream')
+            res.setHeader('Cache-Control', 'public, max-age=31536000')
+            
+            const fileStream = createReadStream(fullPath)
+            fileStream.pipe(res)
+            return
+          }
+        } catch (error) {
+          console.warn('Error serving pattern asset:', error.message)
+        }
+        next()
+      })
     },
     closeBundle() {
       // Copy template assets during build
