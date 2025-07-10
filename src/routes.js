@@ -2,8 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from './pages/Home.vue'
 import Learn from './pages/Learn.vue'
 import Build from './pages/Build.vue'
-import TemplateDetail from './pages/TemplateDetail.vue'
-import UseCaseDetail from './pages/UseCaseDetail.vue'
+import BlueprintDetail from './pages/BlueprintDetail.vue'
 import NotFound from './pages/NotFound.vue'
 
 const routes = [
@@ -23,15 +22,9 @@ const routes = [
     component: Build
   },
   {
-    path: '/build/templates/:slug',
-    name: 'template-detail',
-    component: TemplateDetail,
-    props: true
-  },
-  {
-    path: '/build/use-cases/:slug',
-    name: 'usecase-detail',
-    component: UseCaseDetail,
+    path: '/build/blueprints/:slug',
+    name: 'blueprint-detail',
+    component: BlueprintDetail,
     props: true
   },
   // 404 route

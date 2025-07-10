@@ -2,11 +2,11 @@
   <div class="usecase-detail">
     <div v-if="isLoading" class="loading">
       <div class="spinner"></div>
-      <p>Loading use case...</p>
+      <p>Loading repository...</p>
     </div>
 
     <div v-else-if="error" class="error">
-      <h2>Use Case Not Found</h2>
+      <h2>Repository Not Found</h2>
       <p>{{ error }}</p>
       <RouterLink to="/build" class="back-button">← Back to Build</RouterLink>
     </div>
@@ -17,7 +17,7 @@
         <div class="breadcrumb">
           <RouterLink to="/build">Build</RouterLink>
           <span class="separator">→</span>
-          <RouterLink to="/build?type=use-cases">Use Cases</RouterLink>
+          <RouterLink to="/build?type=repositories">Repositories</RouterLink>
           <span class="separator">→</span>
           <span class="current">{{ useCase.title }}</span>
         </div>
@@ -27,7 +27,7 @@
           <p class="usecase-description">{{ useCase.excerpt }}</p>
           
           <div class="usecase-badges">
-            <span class="badge type-badge">Use Case</span>
+            <span class="badge type-badge">Repository</span>
             <span v-if="useCase.skillLevel" class="badge skill-badge">{{ useCase.skillLevel }}</span>
             <span v-if="useCase.date" class="badge date-badge">{{ formatDate(useCase.date) }}</span>
           </div>
@@ -68,10 +68,10 @@
         <!-- Sidebar -->
         <aside class="usecase-sidebar">
           <div class="sidebar-section">
-            <h3>Use Case Info</h3>
+            <h3>Repository Info</h3>
             <dl class="info-list">
               <dt>Type</dt>
-              <dd>Use Case</dd>
+              <dd>Repository</dd>
               
               <dt v-if="useCase.skillLevel">Skill Level</dt>
               <dd v-if="useCase.skillLevel">{{ useCase.skillLevel }}</dd>
@@ -100,9 +100,9 @@
           </div>
           
           <div class="sidebar-section">
-            <h3>What is a Use Case?</h3>
+            <h3>What is a Repository?</h3>
             <p class="sidebar-text">
-              Use cases provide complete, ready-to-deploy implementations of agentic AI solutions for specific business scenarios.
+              Repositories provide complete, ready-to-deploy implementations of agentic AI solutions for specific business scenarios.
             </p>
           </div>
         </aside>
@@ -127,6 +127,7 @@ const renderedContent = computed(() => {
 })
 
 const formatDate = (dateString) => {
+  if (!dateString) return ''
   return new Date(dateString).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
@@ -134,30 +135,60 @@ const formatDate = (dateString) => {
   })
 }
 
-const loadUseCase = async () => {
+const loadRepository = async () => {
   isLoading.value = true
   error.value = null
   
   try {
     const { slug } = route.params
     
-    // Import markdown as raw string for consistent processing
-    const rawModule = await import(`../data/content/build/use-cases/${slug}.md?raw`)
-    const rawMarkdown = rawModule.default
+    // Load from repositories directory
+    const modules = import.meta.glob('../data/content/build/repositories/*.md')
     
-    // Parse frontmatter and content using our utility
-    const { parseMarkdown } = await import('../utils/markdown')
-    const parsed = parseMarkdown(rawMarkdown)
+    // Find matching module by filename
+    const matchingPath = Object.keys(modules).find(path => {
+      const filename = path.split('/').pop().replace('.md', '')
+      return filename === slug
+    })
     
-    const frontmatter = parsed
-    const content = parsed.body
+    if (!matchingPath) {
+      throw new Error(`Repository "${slug}" not found`)
+    }
+    
+    // Import the processed module
+    const module = await modules[matchingPath]()
+    const frontmatter = module.frontmatter || {}
+    
+    // Debug: Log the module structure to understand what's available
+    console.log('Module structure:', Object.keys(module))
+    console.log('Module default type:', typeof module.default)
+    console.log('Module html:', typeof module.html)
+    
+    // Extract content - vite-plugin-md provides content in different ways
+    let content = ''
+    
+    // Try different ways to get the content
+    if (typeof module.html === 'string') {
+      content = module.html
+    } else if (module.__content) {
+      content = module.__content
+    } else if (module.content) {
+      content = module.content
+    } else if (typeof module.default === 'string') {
+      content = module.default
+    } else {
+      // For now, if we can't extract HTML, use the raw markdown from frontmatter
+      // This is a fallback - in a real app you might want to render the Vue component
+      content = frontmatter.excerpt || 'Content processing not supported yet for this module type'
+      console.warn('Could not extract HTML content from module:', module)
+    }
     
     useCase.value = {
       id: frontmatter.id || slug,
-      title: frontmatter.title || 'Untitled Use Case',
+      title: frontmatter.title || 'Untitled Repository',
       excerpt: frontmatter.description || frontmatter.excerpt || '',
       content: content,
-      type: frontmatter.type || 'use-cases',
+      type: frontmatter.type || 'repositories',
       date: frontmatter.date,
       url: frontmatter.url,
       image: frontmatter.image,
@@ -169,15 +200,15 @@ const loadUseCase = async () => {
     }
     
   } catch (err) {
-    console.error('Error loading use case:', err)
-    error.value = 'Use case not found'
+    console.error('Error loading repository:', err)
+    error.value = `Repository not found: ${err.message}`
   } finally {
     isLoading.value = false
   }
 }
 
 onMounted(() => {
-  loadUseCase()
+  loadRepository()
 })
 </script>
 
@@ -229,9 +260,9 @@ onMounted(() => {
 }
 
 .usecase-content {
-  max-width: 1200px;
+  max-width: 100rem;
   margin: 0 auto;
-  padding: var(--space-6);
+  padding: var(--space-12) 0;
 }
 
 .usecase-header {
@@ -348,9 +379,10 @@ onMounted(() => {
 
 .usecase-body {
   display: grid;
-  grid-template-columns: 1fr 300px;
+  grid-template-columns: 2fr 1fr;
   gap: var(--space-8);
   align-items: start;
+  padding: 0 var(--space-4);
 }
 
 .content-container {
@@ -448,6 +480,8 @@ onMounted(() => {
   border: 1px solid var(--color-border);
   position: sticky;
   top: var(--space-6);
+  min-width: 280px;
+  max-width: 400px;
 }
 
 .sidebar-section {
@@ -496,15 +530,24 @@ onMounted(() => {
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .usecase-body {
     grid-template-columns: 1fr;
     gap: var(--space-6);
+    padding: 0 var(--space-6);
   }
   
   .usecase-sidebar {
     position: static;
     order: -1;
+    min-width: auto;
+    max-width: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .usecase-body {
+    padding: 0 var(--space-4);
   }
   
   .usecase-title {
@@ -512,7 +555,7 @@ onMounted(() => {
   }
   
   .usecase-content {
-    padding: var(--space-4);
+    padding: var(--space-8) 0;
   }
 }
 </style>

@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { createGlobalState, useStorage } from '@vueuse/core'
 import filterConfig from '../config/filters'
 import { CONTENT_CONFIG } from '../config/content'
+import { parseMarkdownFile } from '../utils/markdown'
 
 /**
  * Global filter state using VueUse createGlobalState
@@ -65,8 +66,8 @@ export function useContentLoader() {
       
       if (section === 'build') {
         modules = {
-          ...import.meta.glob('../data/content/build/templates/*.md'),
-          ...import.meta.glob('../data/content/build/use-cases/*.md')
+          ...import.meta.glob('../data/content/build/blueprints/**/template.md'),
+          ...import.meta.glob('../data/content/build/repositories/*.md')
         }
       } else if (section === 'learn') {
         modules = {
@@ -103,7 +104,7 @@ export function useContentLoader() {
       let validTypes = ['all'];
       
       if (filters.value.page === 'build') {
-        validTypes = ['all', 'templates', 'use-cases'];
+        validTypes = ['all', 'blueprints', 'repositories'];
       } else if (filters.value.page === 'learn') {
         validTypes = ['all', 'blogs', 'videos', 'workshops'];
       }
@@ -131,12 +132,16 @@ export function useContentLoader() {
     // Load content based on the current page
     if (filters.value.page === 'build') {
       // Load content for Build page
-      const templateModules = import.meta.glob('../data/content/build/templates/*.md')
-      const useCaseModules = import.meta.glob('../data/content/build/use-cases/*.md')
+      // For blueprints, load template.md files as raw text to parse frontmatter manually
+      const blueprintModules = import.meta.glob('../data/content/build/blueprints/**/template.md', {
+        query: '?raw',
+        import: 'default'
+      })
+      const repositoryModules = import.meta.glob('../data/content/build/repositories/*.md')
       
       moduleObjects = {
-        ...templateModules,
-        ...useCaseModules
+        ...blueprintModules,
+        ...repositoryModules
       }
     } else if (filters.value.page === 'learn') {
       // Load content for Learn page
@@ -158,17 +163,44 @@ export function useContentLoader() {
           // Import the module
           const module = await importModule()
           
-          // Extract frontmatter
-          const frontmatter = module.frontmatter || {}
+          // Extract frontmatter - handle both raw markdown and processed modules
+          let frontmatter = {}
+          if (typeof module === 'string') {
+            // Raw markdown import - parse frontmatter manually
+            const parsed = parseMarkdownFile(module)
+            frontmatter = parsed.frontmatter || {}
+          } else {
+            // Regular module import
+            frontmatter = module.frontmatter || {}
+          }
           
           // Determine content type from path if not specified in frontmatter
           const pathSegments = path.split('/')
-          const typeFromPath = pathSegments[pathSegments.length - 2] // Get parent directory name
+          
+          // For template.md files, the type should be 'blueprints' (grandparent directory)
+          // For other files, use the immediate parent directory
+          let typeFromPath
+          if (pathSegments[pathSegments.length - 1] === 'template.md') {
+            // For template.md files: ../data/content/build/blueprints/hello-world-agent-template/template.md
+            // We want 'blueprints' (index -3), not 'hello-world-agent-template' (index -2)
+            typeFromPath = pathSegments[pathSegments.length - 3]
+          } else {
+            // For regular files: ../data/content/build/repositories/some-repository.md
+            // Use the parent directory name directly
+            typeFromPath = pathSegments[pathSegments.length - 2]
+          }
+          
           const type = frontmatter.type || typeFromPath
           
-          // Use filename as slug if not specified
+          // Use filename as slug if not specified, but for templates use the directory name
           const filename = pathSegments[pathSegments.length - 1]
-          const slug = frontmatter.slug || filename.replace('.md', '')
+          let slug = frontmatter.slug || filename.replace('.md', '')
+          
+          // For template.md files, use the parent directory name as the slug
+          if (filename === 'template.md') {
+            const templateDirName = pathSegments[pathSegments.length - 2]
+            slug = frontmatter.slug || templateDirName
+          }
           
           // Extract description as excerpt if available
           const excerpt = frontmatter.description || frontmatter.excerpt || ''
@@ -180,7 +212,7 @@ export function useContentLoader() {
             id: frontmatter.id || slug,
             title: frontmatter.title || 'Untitled',
             excerpt: excerpt,
-            url: frontmatter.url || '#',
+            url: frontmatter.url, // Don't set default URL, let Build page generate it
             image: image,
             type,
             date: frontmatter.date || new Date().toISOString().split('T')[0],

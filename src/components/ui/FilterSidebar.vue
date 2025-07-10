@@ -40,7 +40,6 @@
           <FilterSection
             v-if="showTimeFilter"
             title="Time Period"
-            :icon="ClockIcon"
             :is-mobile="isMobile"
             :open="accordionState.time"
             :toggle="() => toggleAccordion('time')"
@@ -58,7 +57,6 @@
           <FilterSection
             v-if="showSkillFilter"
             title="Skill Level"
-            :icon="SkillIcon"
             :is-mobile="isMobile"
             :open="accordionState.skill"
             :toggle="() => toggleAccordion('skill')"
@@ -76,7 +74,6 @@
           <FilterSection
             v-if="showFrameworksFilter && filterOptions.frameworks.values.length > 0"
             title="Frameworks"
-            :icon="FrameworkIcon"
             :is-mobile="isMobile"
             :open="accordionState.frameworks"
             :toggle="() => toggleAccordion('frameworks')"
@@ -93,7 +90,6 @@
           <FilterSection
             v-if="showServicesFilter"
             title="AWS Services"
-            :icon="ServiceIcon"
             :is-mobile="isMobile"
             :open="accordionState.services"
             :toggle="() => toggleAccordion('services')"
@@ -162,12 +158,8 @@ const props = defineProps({
   }
 });
 
-// Icon components
+// Icon components (only keeping CloseIcon for mobile sidebar)
 import CloseIcon from './FilterSidebar/icons/CloseIcon.vue';
-import ClockIcon from './FilterSidebar/icons/ClockIcon.vue';
-import SkillIcon from './FilterSidebar/icons/SkillIcon.vue';
-import FrameworkIcon from './FilterSidebar/icons/FrameworkIcon.vue';
-import ServiceIcon from './FilterSidebar/icons/ServiceIcon.vue';
 
 // Filter components
 import FilterSection from './FilterSidebar/FilterSection.vue';
@@ -415,27 +407,38 @@ onBeforeUnmount(() => {
   min-height: 250px;
   margin: 0 auto;
   background: transparent;
+  /* Hide scrollbar by default */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.filter-sidebar::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+/* Show subtle scrollbar on hover */
+.filter-sidebar:hover {
   scrollbar-width: thin;
   scrollbar-color: rgba(var(--aws-purple-rgb), 0.2) transparent;
 }
 
-/* Custom scrollbar for Webkit browsers */
-.filter-sidebar::-webkit-scrollbar {
-  width: 4px;
+.filter-sidebar:hover::-webkit-scrollbar {
+  width: 6px;
 }
 
-.filter-sidebar::-webkit-scrollbar-track {
+.filter-sidebar:hover::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.filter-sidebar::-webkit-scrollbar-thumb {
-  background-color: rgba(var(--aws-purple-rgb), 0.15);
-  border-radius: var(--gr-space-xs);
-  transition: none;
+.filter-sidebar:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(var(--aws-purple-rgb), 0.2);
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
 }
 
-.filter-sidebar::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(var(--aws-purple-rgb), 0.35);
+.filter-sidebar:hover::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(var(--aws-purple-rgb), 0.4);
 }
 
 .sidebar-header {
@@ -536,25 +539,38 @@ onBeforeUnmount(() => {
   padding: var(--gr-space-md);
   flex: 1;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(var(--aws-purple-rgb), 0.15) transparent;
+  /* Hide scrollbar by default */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
 }
 
 .sidebar-content::-webkit-scrollbar {
-  width: 4px;
-}
-
-.sidebar-content::-webkit-scrollbar-track {
+  width: 0px;
   background: transparent;
 }
 
-.sidebar-content::-webkit-scrollbar-thumb {
-  background-color: rgba(var(--aws-blue-rgb), 0.15);
-  border-radius: 4px;
+/* Show subtle scrollbar on hover */
+.sidebar-content:hover {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--aws-purple-rgb), 0.2) transparent;
 }
 
-.sidebar-content::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(var(--aws-purple-rgb), 0.25);
+.sidebar-content:hover::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-content:hover::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-content:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(var(--aws-purple-rgb), 0.2);
+  border-radius: 3px;
+  transition: background-color 0.2s ease;
+}
+
+.sidebar-content:hover::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(var(--aws-purple-rgb), 0.4);
 }
 
 /* Backdrop overlay for mobile */
@@ -669,15 +685,12 @@ onBeforeUnmount(() => {
     
   .filter-sidebar {
     position: sticky;
-    /* Increased top value to prevent overlap with header */
     top: 150px;
-    /* Adjusted max-height to account for increased top offset */
     max-height: calc(100vh - 220px);
     transform: none !important;
     display: block;
     opacity: 1;
     visibility: visible;
-    /* Add z-index to ensure proper stacking order */
     z-index: 1;
   }
   

@@ -3,13 +3,13 @@
     <div class="container footer-container">
       <div class="footer-content">
         <ul class="footer-nav">
-          <li><a href="#">Privacy</a></li>
+          <!-- <li><a href="#">Privacy</a></li>
           <li class="separator">|</li>
           <li><a href="#">Site Terms</a></li>
           <li class="separator">|</li>
           <li><a href="#">Cookie Preferences</a></li>
           <li class="separator">|</li>
-          <li class="footer-copyright">&copy; Copyright 2025 Amazon.com, Inc. or its affiliates. All rights reserved.</li>
+          <li class="footer-copyright">&copy; Copyright 2025 Amazon.com, Inc. or its affiliates. All rights reserved.</li> -->
         </ul>
       </div>
     </div>

@@ -64,7 +64,12 @@
                   class="content-card"
                 >
                   <div class="card-image">
-                    <img :src="getContentImage(item)" :alt="item.title" />
+                    <ContentImage
+                      :src="getContentImage(item)"
+                      :alt="getContentAltText(item)"
+                      :content-item="item"
+                      aspect-ratio="16/9"
+                    />
                   </div>
                   <div class="content-type">{{ item.type }}</div>
                   <h3 class="content-title">{{ item.title }}</h3>
@@ -91,10 +96,11 @@
 import { ref, computed, onMounted, watch, onBeforeMount, nextTick } from 'vue'
 import { useContentLoader, useFilterState } from '../composables/useContentLoader'
 import { formatDate } from '../utils/markdown'
-import { getContentImage } from '../utils/contentHelpers'
+import { getContentImage, getContentAltText } from '../utils/contentHelpers'
 import { useDebounce } from '@vueuse/core'
 import { useRoute } from 'vue-router'
 import FilterSidebar from '../components/ui/FilterSidebar.vue'
+import ContentImage from '../components/ui/ContentImage.vue'
 
 // Get route for accessing query parameters
 const route = useRoute()
@@ -216,9 +222,15 @@ onMounted(async () => {
 
 // Watch for route query parameter changes to update tabs when navigating via header dropdown
 watch(() => route.query.type, (newType) => {
-  if (newType && ['all', 'blogs', 'videos', 'workshops'].includes(newType)) {
+  const validTypes = ['all', 'blogs', 'videos', 'workshops'];
+  
+  if (newType && validTypes.includes(newType)) {
     console.log(`[LEARN] Route query type changed to: ${newType}`);
     filters.value.type = newType;
+  } else if (newType === undefined) {
+    // Reset to 'all' when no type query parameter (e.g., navigating to /learn)
+    console.log('[LEARN] No query parameter, resetting to "all"');
+    filters.value.type = 'all';
   }
 })
 </script>
@@ -467,6 +479,22 @@ watch(() => route.query.type, (newType) => {
   position: relative;
 }
 
+.card-image :deep(.content-image-container) {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.card-image :deep(.content-image) {
+  border-radius: inherit;
+}
+
+/* Preserve existing hover effect */
+.content-card:hover .card-image :deep(.content-image) {
+  transform: scale(1.05);
+}
+
+/* Legacy img support (fallback) */
 .card-image img {
   width: 100%;
   height: 100%;

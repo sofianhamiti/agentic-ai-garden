@@ -1,36 +1,25 @@
 <template>
-  <div class="pattern-detail">
-    <div v-if="isLoading" class="loading">
-      <div class="spinner"></div>
-      <p>Loading pattern...</p>
-    </div>
-
-    <div v-else-if="error" class="error">
-      <h2>Pattern Not Found</h2>
-      <p>{{ error }}</p>
-      <RouterLink to="/build" class="back-button">← Back to Build</RouterLink>
-    </div>
-
-    <div v-else-if="pattern" class="pattern-content">
-      <!-- Header -->
-      <div class="pattern-header">
-        <div class="breadcrumb">
-          <RouterLink to="/build">Build</RouterLink>
-          <span class="separator">→</span>
-          <span class="current">{{ pattern.title }}</span>
-        </div>
-        
-        <div class="pattern-meta">
-          <h1 class="pattern-title">{{ pattern.title }}</h1>
-          <p class="pattern-description">{{ pattern.excerpt }}</p>
+  <DetailPageLayout :is-loading="isLoading" :error="error">
+    <!-- Header Section -->
+    <template #header>
+      <section class="header-section">
+        <div class="container">
+          <div class="breadcrumb">
+            <RouterLink to="/build">Build</RouterLink>
+            <span class="separator">→</span>
+            <span class="current">{{ pattern?.title }}</span>
+          </div>
           
-          <div class="pattern-badges">
+          <h1 class="page-title">{{ pattern?.title }}</h1>
+          <p class="page-description">{{ pattern?.excerpt }}</p>
+          
+          <div v-if="pattern" class="pattern-badges">
             <span class="badge type-badge">{{ pattern.type }}</span>
             <span v-if="pattern.skillLevel" class="badge skill-badge">{{ pattern.skillLevel }}</span>
             <span v-if="pattern.date" class="badge date-badge">{{ formatDate(pattern.date) }}</span>
           </div>
           
-          <div v-if="pattern.frameworks?.length || pattern.services?.length" class="pattern-tags">
+          <div v-if="pattern?.frameworks?.length || pattern?.services?.length" class="pattern-tags">
             <div v-if="pattern.frameworks?.length" class="tag-group">
               <span class="tag-label">Frameworks:</span>
               <span v-for="framework in pattern.frameworks" :key="framework" class="tag framework-tag">
@@ -45,69 +34,69 @@
             </div>
           </div>
         </div>
-      </div>
+      </section>
+    </template>
 
-      <!-- Content -->
-      <div class="pattern-body">
-        <div class="content-container">
-          <article class="markdown-content" v-html="renderedContent"></article>
-          
-          <!-- Actions -->
-          <div v-if="pattern.url && pattern.url !== '#'" class="pattern-actions">
-            <a :href="pattern.url" target="_blank" rel="noopener noreferrer" class="action-button primary">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                <polyline points="15,3 21,3 21,9"></polyline>
-                <line x1="10" y1="14" x2="21" y2="3"></line>
-              </svg>
-              View Implementation
-            </a>
-          </div>
-        </div>
-        
-        <!-- Sidebar -->
-        <aside class="pattern-sidebar">
-          <div class="sidebar-section">
-            <h3>Quick Info</h3>
-            <dl class="info-list">
-              <dt>Type</dt>
-              <dd>{{ pattern.type }}</dd>
-              
-              <dt v-if="pattern.skillLevel">Skill Level</dt>
-              <dd v-if="pattern.skillLevel">{{ pattern.skillLevel }}</dd>
-              
-              <dt v-if="pattern.date">Published</dt>
-              <dd v-if="pattern.date">{{ formatDate(pattern.date) }}</dd>
-            </dl>
-          </div>
-          
-          <div v-if="pattern.frameworks?.length" class="sidebar-section">
-            <h3>Frameworks</h3>
-            <div class="tag-list">
-              <span v-for="framework in pattern.frameworks" :key="framework" class="tag framework-tag">
-                {{ framework }}
-              </span>
-            </div>
-          </div>
-          
-          <div v-if="pattern.services?.length" class="sidebar-section">
-            <h3>AWS Services</h3>
-            <div class="tag-list">
-              <span v-for="service in pattern.services" :key="service" class="tag service-tag">
-                {{ service }}
-              </span>
-            </div>
-          </div>
-        </aside>
+    <!-- Main Content -->
+    <template #content>
+      <article class="markdown-content" v-html="renderedContent"></article>
+      
+      <!-- Actions -->
+      <div v-if="pattern?.url && pattern.url !== '#'" class="pattern-actions">
+        <a :href="pattern.url" target="_blank" rel="noopener noreferrer" class="action-button primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+            <polyline points="15,3 21,3 21,9"></polyline>
+            <line x1="10" y1="14" x2="21" y2="3"></line>
+          </svg>
+          View Implementation
+        </a>
       </div>
-    </div>
-  </div>
+    </template>
+
+    <!-- Sidebar -->
+    <template #sidebar>
+      <div class="sidebar-section">
+        <h3>Quick Info</h3>
+        <dl class="info-list">
+          <dt>Type</dt>
+          <dd>{{ pattern?.type }}</dd>
+          
+          <dt v-if="pattern?.skillLevel">Skill Level</dt>
+          <dd v-if="pattern?.skillLevel">{{ pattern.skillLevel }}</dd>
+          
+          <dt v-if="pattern?.date">Published</dt>
+          <dd v-if="pattern?.date">{{ formatDate(pattern.date) }}</dd>
+        </dl>
+      </div>
+      
+      <div v-if="pattern?.frameworks?.length" class="sidebar-section">
+        <h3>Frameworks</h3>
+        <div class="tag-list">
+          <span v-for="framework in pattern.frameworks" :key="framework" class="tag framework-tag">
+            {{ framework }}
+          </span>
+        </div>
+      </div>
+      
+      <div v-if="pattern?.services?.length" class="sidebar-section">
+        <h3>AWS Services</h3>
+        <div class="tag-list">
+          <span v-for="service in pattern.services" :key="service" class="tag service-tag">
+            {{ service }}
+          </span>
+        </div>
+      </div>
+    </template>
+  </DetailPageLayout>
 </template>
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { renderMarkdown } from '../utils/markdown'
+import { formatDate } from '../utils/dateHelpers'
+import DetailPageLayout from '../components/layout/DetailPageLayout.vue'
 
 const route = useRoute()
 const pattern = ref(null)
@@ -118,14 +107,6 @@ const renderedContent = computed(() => {
   if (!pattern.value?.content) return ''
   return renderMarkdown(pattern.value.content)
 })
-
-const formatDate = (dateString) => {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
 
 const loadPattern = async () => {
   isLoading.value = true
@@ -189,60 +170,18 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.pattern-detail {
-  min-height: 100vh;
-  background-color: var(--color-background);
-}
-
-.loading, .error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 50vh;
-  text-align: center;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid var(--color-border);
-  border-top: 4px solid var(--aws-orange);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: var(--space-4);
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.back-button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  background: var(--aws-purple);
+/* Header Section */
+.header-section {
+  padding: var(--space-16) 0;
+  background: linear-gradient(to right, var(--aws-blue-dark), var(--aws-blue-medium));
   color: white;
-  text-decoration: none;
-  border-radius: var(--radius-md);
-  transition: background-color 0.2s;
 }
 
-.back-button:hover {
-  background: var(--aws-purple-dark);
-}
-
-.pattern-content {
-  max-width: 1200px;
+.container {
+  max-width: 100rem;
+  width: 100%;
   margin: 0 auto;
-  padding: var(--space-6);
-}
-
-.pattern-header {
-  margin-bottom: var(--space-8);
+  padding: 0 var(--space-4);
 }
 
 .breadcrumb {
@@ -251,11 +190,11 @@ onMounted(() => {
   gap: var(--space-2);
   margin-bottom: var(--space-4);
   font-size: 0.875rem;
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .breadcrumb a {
-  color: var(--aws-purple);
+  color: white;
   text-decoration: none;
 }
 
@@ -264,26 +203,24 @@ onMounted(() => {
 }
 
 .separator {
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .current {
   font-weight: 600;
+  color: white;
 }
 
-.pattern-title {
-  font-size: 2.5rem;
+.page-title {
+  font-size: 3rem;
   font-weight: 700;
-  color: var(--aws-purple);
-  margin: 0 0 var(--space-4);
-  line-height: 1.2;
+  margin-bottom: var(--space-4);
 }
 
-.pattern-description {
-  font-size: 1.125rem;
-  color: var(--color-text-muted);
-  margin: 0 0 var(--space-6);
-  line-height: 1.6;
+.page-description {
+  font-size: 1.25rem;
+  max-width: 60rem;
+  margin-bottom: var(--space-4);
 }
 
 .pattern-badges {
@@ -307,13 +244,13 @@ onMounted(() => {
 }
 
 .skill-badge {
-  background: var(--aws-purple);
+  background: rgba(255, 255, 255, 0.2);
   color: white;
 }
 
 .date-badge {
-  background: var(--color-border);
-  color: var(--color-text-muted);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .pattern-tags {
@@ -331,7 +268,7 @@ onMounted(() => {
 .tag-label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-text-muted);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .tag {
@@ -342,31 +279,23 @@ onMounted(() => {
 }
 
 .framework-tag {
-  background: rgba(124, 58, 237, 0.1);
-  color: var(--aws-purple);
-  border: 1px solid rgba(124, 58, 237, 0.2);
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .service-tag {
-  background: rgba(255, 153, 0, 0.1);
-  color: var(--aws-orange);
-  border: 1px solid rgba(255, 153, 0, 0.2);
+  background: rgba(255, 153, 0, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 153, 0, 0.4);
 }
 
-.pattern-body {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: var(--space-8);
-  align-items: start;
-}
-
-.content-container {
-  min-width: 0;
-}
-
+/* Main Content */
 .markdown-content {
   line-height: 1.7;
   color: var(--color-text);
+  width: 100%;
+  max-width: none;
 }
 
 .markdown-content h1,
@@ -448,15 +377,7 @@ onMounted(() => {
   transform: translateY(-2px);
 }
 
-.pattern-sidebar {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  padding: var(--space-6);
-  border: 1px solid var(--color-border);
-  position: sticky;
-  top: var(--space-6);
-}
-
+/* Sidebar Sections */
 .sidebar-section {
   margin-bottom: var(--space-6);
 }
@@ -495,24 +416,30 @@ onMounted(() => {
   gap: var(--space-2);
 }
 
+.sidebar-section .framework-tag {
+  background: rgba(124, 58, 237, 0.1);
+  color: var(--aws-purple);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.sidebar-section .service-tag {
+  background: rgba(255, 153, 0, 0.1);
+  color: var(--aws-orange);
+  border: 1px solid rgba(255, 153, 0, 0.2);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
-  .pattern-body {
-    grid-template-columns: 1fr;
-    gap: var(--space-6);
-  }
-  
-  .pattern-sidebar {
-    position: static;
-    order: -1;
-  }
-  
-  .pattern-title {
+  .page-title {
     font-size: 2rem;
   }
   
-  .pattern-content {
-    padding: var(--space-4);
+  .pattern-badges {
+    flex-wrap: wrap;
+  }
+  
+  .pattern-tags {
+    gap: var(--space-2);
   }
 }
 </style>

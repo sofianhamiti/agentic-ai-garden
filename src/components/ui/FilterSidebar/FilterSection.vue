@@ -46,7 +46,8 @@ const props = defineProps({
   },
   icon: {
     type: Object,
-    required: true
+    required: false,
+    default: null
   },
   isMobile: {
     type: Boolean,
@@ -200,8 +201,13 @@ const handleLeave = (el) => {
 .accordion-left {
   display: flex;
   align-items: center;
-  gap: var(--gr-space-sm); /* Golden ratio spacing */
+  gap: 0; /* Remove gap since we'll handle spacing conditionally */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Add margin to filter label only when there's an icon */
+.accordion-left .section-icon + .filter-label {
+  margin-left: var(--gr-space-sm);
 }
 
 .section-icon {

@@ -4,7 +4,7 @@
       <div class="container">
         <h1 class="page-title">Build</h1>
         <p class="page-description">
-          Fast-track your development with templates and use cases
+          Fast-track your development with blueprints and repositories
         </p>
       </div>
     </section>
@@ -59,14 +59,24 @@
               
               <!-- Add key to force re-render when filters change -->
               <div v-if="content.length > 0 && filteredContent.length > 0" class="content-grid" :key="filterChangeKey">
-                <RouterLink
+                <!-- Single loop with conditional rendering based on type -->
+                <component
+                  :is="item.type === 'repositories' ? 'a' : 'RouterLink'"
                   v-for="item in filteredContent"
                   :key="item.id"
-                  :to="getDetailPath(item)"
+                  :to="item.type === 'repositories' ? undefined : getDetailPath(item)"
+                  :href="item.type === 'repositories' ? getDetailPath(item) : undefined"
+                  :target="item.type === 'repositories' ? '_blank' : undefined"
+                  :rel="item.type === 'repositories' ? 'noopener noreferrer' : undefined"
                   class="content-card"
                 >
                   <div class="card-image">
-                    <img :src="getContentImage(item)" :alt="item.title" />
+                    <ContentImage
+                      :src="getContentImage(item)"
+                      :alt="getContentAltText(item)"
+                      :content-item="item"
+                      aspect-ratio="16/9"
+                    />
                   </div>
                   <div class="content-type">{{ item.type }}</div>
                   <h3 class="content-title">{{ item.title }}</h3>
@@ -74,7 +84,7 @@
                   <div class="content-meta">
                     <span class="content-date">{{ formatDate(item.date) }}</span>
                   </div>
-                </RouterLink>
+                </component>
               </div>
               <div v-else class="empty-state">
                 <p v-if="isLoading">Loading resources...</p>
@@ -93,10 +103,11 @@
 import { ref, computed, onMounted, watch, onBeforeMount, nextTick } from 'vue'
 import { useContentLoader, useFilterState } from '../composables/useContentLoader'
 import { formatDate } from '../utils/markdown'
-import { getContentImage } from '../utils/contentHelpers'
+import { getContentImage, getContentAltText } from '../utils/contentHelpers'
 import { useDebounce } from '@vueuse/core'
 import { useRoute, RouterLink } from 'vue-router'
 import FilterSidebar from '../components/ui/FilterSidebar.vue'
+import ContentImage from '../components/ui/ContentImage.vue'
 
 // Get route for accessing query parameters
 const route = useRoute()
@@ -122,8 +133,8 @@ const {
 // Tab options - customized for the Build page
 const tabs = [
   { label: 'All Resources', value: 'all' },
-  { label: 'Templates', value: 'templates' },
-  { label: 'Use Cases', value: 'use-cases' }
+  { label: 'Blueprints', value: 'blueprints' },
+  { label: 'Repositories', value: 'repositories' }
 ]
 
 // Log whenever the filteredContent changes (for debugging)
@@ -159,7 +170,7 @@ onBeforeMount(() => {
   console.log('[BUILD] Set page filter to:', filters.value.page);
   
   // Validate the filter type on mount
-  const validTypes = ['all', 'templates', 'use-cases'];
+  const validTypes = ['all', 'blueprints', 'repositories'];
   if (!validTypes.includes(filters.value.type)) {
     console.log(`[BUILD] Resetting invalid initial filter type '${filters.value.type}' to 'all'`);
     filters.value.type = 'all';
@@ -203,7 +214,7 @@ onMounted(async () => {
   
   // Read type from URL query parameter if present
   const typeParam = route.query.type;
-  if (typeParam && ['all', 'templates', 'use-cases'].includes(typeParam)) {
+  if (typeParam && ['all', 'blueprints', 'repositories'].includes(typeParam)) {
     console.log(`[BUILD] Setting type from URL parameter: ${typeParam}`);
     filters.value.type = typeParam;
   }
@@ -217,9 +228,15 @@ onMounted(async () => {
 
 // Watch for route query parameter changes to update tabs when navigating via header dropdown
 watch(() => route.query.type, (newType) => {
-  if (newType && ['all', 'templates', 'use-cases'].includes(newType)) {
+  const validTypes = ['all', 'blueprints', 'repositories'];
+  
+  if (newType && validTypes.includes(newType)) {
     console.log(`[BUILD] Route query type changed to: ${newType}`);
     filters.value.type = newType;
+  } else if (newType === undefined) {
+    // Reset to 'all' when no type query parameter (e.g., navigating to /build)
+    console.log('[BUILD] No query parameter, resetting to "all"');
+    filters.value.type = 'all';
   }
 })
 
@@ -227,10 +244,14 @@ watch(() => route.query.type, (newType) => {
 function getDetailPath(item) {
   const slug = item.id || item.title.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '')
   
-  if (item.type === 'templates') {
-    return `/build/templates/${slug}`
-  } else if (item.type === 'use-cases') {
-    return `/build/use-cases/${slug}`
+  // Blueprints have detail pages
+  if (item.type === 'blueprints') {
+    return `/build/blueprints/${slug}`
+  } 
+  // Repositories link directly to external URLs (like Learn section)
+  else if (item.type === 'repositories') {
+    // For repositories, always use external URL if available
+    return item.url || '#'
   }
   
   // Future: Add patterns support
@@ -238,8 +259,13 @@ function getDetailPath(item) {
   //   return `/discover/patterns/${slug}`
   // }
   
-  // Fallback to external URL if type doesn't match
-  return item.url || '#'
+  // Fallback: if external URL is provided, use it; otherwise generate a default path
+  if (item.url) {
+    return item.url
+  }
+  
+  // Default path generation for unrecognized types
+  return `/build/${item.type}/${slug}`
 }
 </script>
 
@@ -489,6 +515,22 @@ function getDetailPath(item) {
   position: relative;
 }
 
+.card-image :deep(.content-image-container) {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+
+.card-image :deep(.content-image) {
+  border-radius: inherit;
+}
+
+/* Preserve existing hover effect */
+.content-card:hover .card-image :deep(.content-image) {
+  transform: scale(1.05);
+}
+
+/* Legacy img support (fallback) */
 .card-image img {
   width: 100%;
   height: 100%;

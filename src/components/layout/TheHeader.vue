@@ -120,8 +120,8 @@ const navItems = [
     name: 'Build',
     path: '/build',
     dropdown: [
-      { name: 'Templates', path: '/build?type=templates' },
-      { name: 'Use Cases', path: '/build?type=use-cases' }
+      { name: 'Blueprints', path: '/build?type=blueprints' },
+      { name: 'Repositories', path: '/build?type=repositories' }
     ]
   }
 ]
