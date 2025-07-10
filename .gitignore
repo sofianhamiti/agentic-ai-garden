@@ -43,3 +43,6 @@ Thumbs.db
 # Claude
 .claude
 .claude/*
+
+# Data folder
+data/
